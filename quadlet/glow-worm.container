@@ -8,7 +8,7 @@ Requires=postgres.service ts-glow-worm.service
 
 [Container]
 ContainerName=glow-worm
-Image=ghcr.io/jmoeser/glow-worm:latest:latest
+Image=ghcr.io/jmoeser/glow-worm:latest
 AutoUpdate=registry
 
 # Share network namespace with the Tailscale sidecar
