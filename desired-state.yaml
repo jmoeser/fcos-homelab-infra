@@ -38,8 +38,7 @@ secrets:
     mode: "0600"
 
   - source: tailscale-openclaw.env
-    target: /var/home/openclaw/.config/coreos-gitops/tailscale-openclaw.env
-    owner: openclaw
+    target: /etc/coreos-gitops/tailscale-openclaw.env
     mode: "0600"
 
   - source: firefly.env
@@ -70,6 +69,7 @@ quadlet:
     - postgres-data.volume
     - ts-firefly-state.volume
     - ts-glow-worm-state.volume
+    - ts-openclaw-state.volume
     - caddy-data.volume
     - caddy-config.volume
     # Database
@@ -77,6 +77,7 @@ quadlet:
     # Tailscale sidecars (must start before their paired app)
     - ts-firefly.container
     - ts-glow-worm.container
+    - ts-openclaw.container
     # Python applications (share TS sidecar network namespace)
     - firefly.container
     - glow-worm.container
@@ -90,10 +91,8 @@ user_quadlets:
     target_dir: /var/home/openclaw/.config/containers/systemd
     units:
       - openclaw-network.network
-      - ts-openclaw-state.volume
       - openclaw-config.volume
       - openclaw-workspace.volume
-      - ts-openclaw.container
       - openclaw.container
 
 # --- Systemd units ---
@@ -127,6 +126,10 @@ files:
 
   - source: etc/coreos-gitops/ts-serve/glow-worm-serve.json
     target: /etc/coreos-gitops/ts-serve/glow-worm-serve.json
+    mode: "0644"
+
+  - source: etc/coreos-gitops/ts-serve/openclaw-serve.json
+    target: /etc/coreos-gitops/ts-serve/openclaw-serve.json
     mode: "0644"
 
   - source: etc/sysctl.d/99-custom.conf
