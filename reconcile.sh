@@ -173,11 +173,17 @@ sync_repo() {
             return 0
         fi
         if [[ -d "${REPO_DIR}" ]]; then
-            log "Stale repo dir without .git found — removing"
-            rm -rf "${REPO_DIR}"
+            log "Stale repo dir without .git found — initializing in place"
+            cd "${REPO_DIR}"
+            git init -b "${REPO_BRANCH}"
+            git remote add origin "${REPO_URL}"
+            git fetch origin "${REPO_BRANCH}" --quiet
+            git reset --hard "origin/${REPO_BRANCH}" --quiet
+            log "Repo initialized at $(git rev-parse --short HEAD)"
+        else
+            log "Cloning repo ${REPO_URL} → ${REPO_DIR}"
+            git clone --branch "${REPO_BRANCH}" "${REPO_URL}" "${REPO_DIR}"
         fi
-        log "Cloning repo ${REPO_URL} → ${REPO_DIR}"
-        git clone --branch "${REPO_BRANCH}" "${REPO_URL}" "${REPO_DIR}"
     else
         cd "${REPO_DIR}"
         local before after
