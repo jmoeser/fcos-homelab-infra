@@ -47,9 +47,13 @@ HealthRetries=3
 HealthStartPeriod=30s
 
 [Service]
+# Pull image before starting so slow downloads don't surprise the health check.
+# The - prefix makes this non-fatal: if the pull fails (offline, registry down)
+# Podman falls back to the cached image.
+ExecStartPre=-/usr/bin/podman pull ghcr.io/openclaw/openclaw:latest
 Restart=always
 RestartSec=15s
-TimeoutStartSec=300
+TimeoutStartSec=600
 
 [Install]
 WantedBy=multi-user.target default.target
