@@ -1,0 +1,40 @@
+# caddy.container — Caddy reverse proxy for LAN access
+# Exposes firefly and glow-worm on the local network.
+# The apps are reachable via their Tailscale sidecar container names on app-network.
+#
+# Caddy listens on the host's port 80/443 for LAN clients.
+# Tailscale sidecars handle the private/remote access path separately.
+
+[Unit]
+Description=Caddy reverse proxy (LAN)
+After=network-online.target ts-firefly.service ts-glow-worm.service
+Wants=network-online.target
+
+[Container]
+ContainerName=caddy
+Image=docker.io/library/caddy:2-alpine
+AutoUpdate=registry
+
+Network=app-network.network
+
+# Expose on host for LAN access
+PublishPort=80:80
+PublishPort=443:443
+
+Volume=caddy-data.volume:/data:Z
+Volume=caddy-config.volume:/config:Z
+Volume=/etc/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+
+PodmanArgs=--memory=128m --cpus=0.25
+
+HealthCmd=wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+
+[Service]
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target default.target

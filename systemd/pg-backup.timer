@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily PostgreSQL backup to Backblaze B2
+
+[Timer]
+# Run daily at 3:00 AM UTC
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

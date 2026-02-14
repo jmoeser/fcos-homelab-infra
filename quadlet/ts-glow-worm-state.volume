@@ -1,0 +1,3 @@
+# ts-glow-worm-state.volume — Tailscale state for glow-worm sidecar
+[Volume]
+VolumeName=ts-glow-worm-state

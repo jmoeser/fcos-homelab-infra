@@ -1,0 +1,22 @@
+# Caddyfile — LAN reverse proxy for Python applications
+#
+# Caddy and the Tailscale sidecars are all on app-network.
+# The Python apps share the network namespace of their respective TS sidecar,
+# so we reverse_proxy to the TS sidecar container name on the app port.
+#
+# Replace the hostnames below with your actual LAN DNS names or use the
+# machine's IP with path-based routing instead.
+
+# ─── Option A: Subdomain-based routing (requires local DNS) ───────────────────
+# Set up DNS records pointing firefly.lan.defestri.org and glow-worm.lan.defestri.org
+# to this machine's LAN IP.
+
+firefly.lan.defestri.org {
+    reverse_proxy ts-firefly:8000
+    tls internal
+}
+
+glow-worm.lan.defestri.org {
+    reverse_proxy ts-glow-worm:8000
+    tls internal
+}

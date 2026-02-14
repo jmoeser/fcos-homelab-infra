@@ -1,0 +1,35 @@
+# ts-firefly.container — Tailscale sidecar for firefly
+# This container creates the network namespace. firefly joins it via
+# Network=ts-firefly.container, so firefly is directly reachable on the tailnet.
+#
+# The app will appear on your tailnet as "firefly" (or whatever TS_HOSTNAME is set to).
+# Tailscale serve is configured to proxy port 8000 → HTTPS on the tailnet.
+
+[Unit]
+Description=Tailscale sidecar for firefly
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=ts-firefly
+Image=ghcr.io/tailscale/tailscale:latest
+AutoUpdate=registry
+
+Network=app-network.network
+EnvironmentFile=/etc/coreos-gitops/tailscale-firefly.env
+
+Volume=ts-firefly-state.volume:/var/lib/tailscale:Z
+
+# Tailscale needs tun device and NET_ADMIN
+AddDevice=/dev/net/tun:/dev/net/tun
+AddCapability=CAP_NET_ADMIN
+AddCapability=CAP_NET_RAW
+
+PodmanArgs=--memory=128m --cpus=0.25
+
+[Service]
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target default.target

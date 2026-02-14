@@ -1,0 +1,146 @@
+# desired-state.yaml
+# Single source of truth for this CoreOS machine's configuration.
+
+# --- rpm-ostree layer packages ---
+packages:
+  install:
+    - htop
+    - tmux
+    - git
+    - strace
+    # Required for secret decryption
+    - age
+    - sops
+    # Required for B2 backups
+    - rclone
+  remove: []
+
+# --- SOPS-encrypted secrets ---
+# Files in secrets/ are encrypted with age via SOPS.
+# The reconciler decrypts them using the age key at /etc/coreos-gitops/age-key.txt
+# and deploys the plaintext to the target path with restricted permissions.
+secrets:
+  - source: postgres.env
+    target: /etc/coreos-gitops/postgres.env
+    mode: "0600"
+
+  - source: tailscale-firefly.env
+    target: /etc/coreos-gitops/tailscale-firefly.env
+    mode: "0600"
+
+  - source: tailscale-glow-worm.env
+    target: /etc/coreos-gitops/tailscale-glow-worm.env
+    mode: "0600"
+
+  - source: tailscale-openclaw.env
+    target: /etc/coreos-gitops/tailscale-openclaw.env
+    mode: "0600"
+
+  - source: firefly.env
+    target: /etc/coreos-gitops/firefly.env
+    mode: "0600"
+
+  - source: glow-worm.env
+    target: /etc/coreos-gitops/glow-worm.env
+    mode: "0600"
+
+  - source: openclaw.env
+    target: /etc/coreos-gitops/openclaw.env
+    mode: "0600"
+
+  - source: rclone.conf
+    target: /etc/coreos-gitops/rclone.conf
+    mode: "0600"
+
+# --- Podman Quadlet containers ---
+quadlet:
+  source_dir: quadlet
+  target_dir: /etc/containers/systemd
+  units:
+    # Networks
+    - app-network.network
+    # Volumes
+    - postgres-data.volume
+    - ts-firefly-state.volume
+    - ts-glow-worm-state.volume
+    - caddy-data.volume
+    - caddy-config.volume
+    # Database
+    - postgres.container
+    # Tailscale sidecars (must start before their paired app)
+    - ts-firefly.container
+    - ts-glow-worm.container
+    # Python applications (share TS sidecar network namespace)
+    - firefly.container
+    - glow-worm.container
+    # LAN reverse proxy
+    - caddy.container
+
+# --- User-level Podman Quadlet containers (rootless) ---
+user_quadlets:
+  - user: openclaw
+    source_dir: quadlet/openclaw
+    target_dir: /home/openclaw/.config/containers/systemd
+    units:
+      - openclaw-network.network
+      - ts-openclaw-state.volume
+      - openclaw-config.volume
+      - openclaw-workspace.volume
+      - ts-openclaw.container
+      - openclaw.container
+
+# --- Systemd units ---
+systemd:
+  source_dir: systemd
+  target_dir: /etc/systemd/system
+  units:
+    - name: pg-backup.service
+      enabled: false
+    - name: pg-backup.timer
+      enabled: true
+
+# --- Config files (non-secret, committed in plaintext) ---
+files:
+  - source: etc/caddy/Caddyfile
+    target: /etc/caddy/Caddyfile
+    mode: "0644"
+    reload_cmd: podman exec caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true
+
+  - source: etc/coreos-gitops/pg-init/init-databases.sh
+    target: /etc/coreos-gitops/pg-init/init-databases.sh
+    mode: "0755"
+
+  - source: etc/coreos-gitops/age-recipients.txt
+    target: /etc/coreos-gitops/age-recipients.txt
+    mode: "0644"
+
+  - source: etc/sysctl.d/99-custom.conf
+    target: /etc/sysctl.d/99-custom.conf
+    mode: "0644"
+    reload_cmd: sysctl --system
+
+  - source: etc/ssh/sshd_config.d/99-hardening.conf
+    target: /etc/ssh/sshd_config.d/99-hardening.conf
+    mode: "0600"
+    reload_cmd: systemctl reload sshd
+
+# --- Firewall rules ---
+firewall:
+  default_zone: public
+  open_ports:
+    - port: 443/tcp
+    - port: 80/tcp
+    - port: 22/tcp
+    # Note: OpenClaw is now only reachable via Tailscale — no LAN port needed
+
+# --- Kernel parameters ---
+sysctl:
+  net.core.somaxconn: 4096
+  vm.swappiness: 10
+
+# --- Reconciler settings ---
+reconciler:
+  interval_minutes: 5
+  log_identifier: coreos-reconciler
+  auto_reboot: false
+  max_drift_minutes: 30

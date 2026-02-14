@@ -1,0 +1,32 @@
+# glow-worm.container
+# Same sidecar pattern as firefly, but shares ts-glow-worm's network namespace.
+
+[Unit]
+Description=Glow Worm
+After=postgres.service ts-glow-worm.service
+Requires=postgres.service ts-glow-worm.service
+
+[Container]
+ContainerName=glow-worm
+Image=ghcr.io/jmoeser/glow-worm:latest:latest
+AutoUpdate=registry
+
+# Share network namespace with the Tailscale sidecar
+Network=ts-glow-worm.container
+
+EnvironmentFile=/etc/coreos-gitops/glow-worm.env
+
+PodmanArgs=--memory=256m --cpus=0.5
+
+HealthCmd=curl -sf http://localhost:8000/health || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
+[Service]
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target default.target

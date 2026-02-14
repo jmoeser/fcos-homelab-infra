@@ -1,0 +1,38 @@
+# postgres.container — PostgreSQL database
+# Accessible to firefly and glow-worm via app-network at hostname "postgres"
+# On first start, init-databases.sh creates per-app databases and users.
+
+[Unit]
+Description=PostgreSQL Database
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=postgres
+Image=docker.io/library/postgres:16-alpine
+AutoUpdate=registry
+
+Network=app-network.network
+NetworkAlias=postgres
+
+Volume=postgres-data.volume:/var/lib/postgresql/data:Z
+Volume=/etc/coreos-gitops/pg-init:/docker-entrypoint-initdb.d:Z,ro
+EnvironmentFile=/etc/coreos-gitops/postgres.env
+
+# Resource limits
+PodmanArgs=--memory=512m --cpus=1.0
+
+# Health check — ensures Postgres is accepting connections
+HealthCmd=pg_isready -U ${POSTGRES_USER:-postgres}
+HealthInterval=15s
+HealthTimeout=5s
+HealthRetries=5
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+RestartSec=10s
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target default.target

@@ -1,0 +1,10 @@
+# age-recipients.txt
+# Public key(s) that can decrypt backups.
+# Add one public key per line. Anyone with the corresponding private key
+# can decrypt the backups.
+#
+# This is the SAME public key from your .sops.yaml — keeps everything
+# decryptable with the same age identity.
+#
+# Replace with your actual public key from: age-keygen
+age1nxfpm7k3ecq3fddn0mvjqh3jemnd34579stu30jwh9e2ytwmsdjsndy86a

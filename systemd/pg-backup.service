@@ -1,0 +1,15 @@
+[Unit]
+Description=PostgreSQL backup to Backblaze B2
+After=postgres.service
+Wants=postgres.service
+
+[Service]
+Type=oneshot
+ExecStart=/var/lib/coreos-gitops/scripts/pg-backup.sh backup
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pg-backup
+
+# Backup-specific env overrides (optional)
+# Environment=PG_BACKUP_RETENTION_DAYS=30
+# Environment=PG_BACKUP_RCLONE_BUCKET=coreos-pg-backups

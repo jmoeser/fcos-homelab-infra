@@ -1,0 +1,11 @@
+# app-network.network — Internal network for Postgres, Python apps, and Caddy
+# All app containers attach to this network for inter-container communication.
+# Tailscale sidecars share the network namespace of their respective app container,
+# so they inherit connectivity to this network automatically.
+
+[Network]
+NetworkName=app-network
+Driver=bridge
+Internal=false
+Subnet=10.89.1.0/24
+Gateway=10.89.1.1

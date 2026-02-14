@@ -1,0 +1,54 @@
+# openclaw.container — OpenClaw AI assistant (gateway)
+# Runs the OpenClaw gateway with web UI exposed on port 18789.
+# Fully containerised with persistent config and workspace volumes.
+#
+# First-run setup:
+#   After the container starts, run the onboarding wizard:
+#     podman exec -it openclaw node dist/index.js onboard
+#   Or use the web UI at http://<machine-ip>:18789
+#
+# The gateway token is written to the config volume during onboarding.
+# Access the dashboard to get the token:
+#     podman exec -it openclaw node dist/index.js dashboard --no-open
+
+[Unit]
+Description=OpenClaw AI Assistant
+After=network-online.target ts-openclaw.service
+Requires=ts-openclaw.service
+Wants=network-online.target
+
+[Container]
+ContainerName=openclaw
+Image=ghcr.io/openclaw/openclaw:latest
+AutoUpdate=registry
+
+# Share network namespace with the Tailscale sidecar
+# OpenClaw web UI (port 18789) is reachable via the tailnet IP of ts-openclaw
+Network=ts-openclaw.container
+
+# Persistent storage
+Volume=openclaw-config.volume:/home/node/.openclaw:Z
+Volume=openclaw-workspace.volume:/home/node/openclaw/workspace:Z
+
+# Environment
+
+# Mount the openclaw USER's rootless Podman socket
+# This lets OpenClaw spawn sandbox containers via the socket,
+# and those containers run as the openclaw user — fully rootless.
+Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
+
+PodmanArgs=--memory=1g --cpus=2.0
+
+HealthCmd=wget --no-verbose --tries=1 --spider http://localhost:18789/ || exit 1
+HealthInterval=60s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=60s
+
+[Service]
+Restart=always
+RestartSec=15s
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target default.target

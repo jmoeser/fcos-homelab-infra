@@ -1,0 +1,7 @@
+# openclaw-network.network — Isolated network for OpenClaw stack
+[Network]
+NetworkName=openclaw-network
+Driver=bridge
+Internal=false
+Subnet=10.89.2.0/24
+Gateway=10.89.2.1

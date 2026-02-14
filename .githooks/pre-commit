@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Pre-commit hook: prevent committing unencrypted secrets.
+# All files under secrets/ must be SOPS-encrypted (contain ENC[AES256_GCM, markers).
+
+set -euo pipefail
+
+unencrypted=()
+
+while IFS= read -r file; do
+    # Skip deleted files
+    if ! [ -f "$file" ]; then
+        continue
+    fi
+
+    if ! grep -q 'ENC\[AES256_GCM,' "$file"; then
+        unencrypted+=("$file")
+    fi
+done < <(git diff --cached --name-only --diff-filter=d -- 'secrets/*')
+
+if [ ${#unencrypted[@]} -gt 0 ]; then
+    echo "ERROR: The following secrets files are NOT encrypted:"
+    for f in "${unencrypted[@]}"; do
+        echo "  $f"
+    done
+    echo ""
+    echo "Run ./scripts/encrypt-secrets.sh before committing."
+    exit 1
+fi

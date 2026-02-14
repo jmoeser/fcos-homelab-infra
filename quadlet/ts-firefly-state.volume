@@ -1,0 +1,3 @@
+# ts-firefly-state.volume — Tailscale state for firefly sidecar
+[Volume]
+VolumeName=ts-firefly-state

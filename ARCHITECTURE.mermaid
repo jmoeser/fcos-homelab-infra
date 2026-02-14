@@ -1,0 +1,73 @@
+---
+title: CoreOS GitOps — Container Architecture
+---
+graph TB
+    subgraph Internet/Tailnet
+        TS[Tailscale Network]
+    end
+
+    subgraph LAN["Local Network"]
+        LAN_CLIENT[LAN Clients]
+    end
+
+    subgraph COREOS["Fedora CoreOS Host"]
+        subgraph RECONCILER["GitOps Reconciler (every 30 min)"]
+            GIT[("Git Repo")]
+            SOPS["SOPS + age<br/>decrypt secrets"]
+            GIT --> SOPS
+        end
+
+        AGE_KEY["/etc/coreos-gitops/age-key.txt<br/>(deployed via Ignition)"]
+        SOPS -.->|"reads"| AGE_KEY
+
+        subgraph APP_NETWORK["app-network (10.89.1.0/24)"]
+            POSTGRES[(PostgreSQL 16<br/>:5432)]
+
+            subgraph NS1["Shared Network Namespace"]
+                TS1[ts-firefly<br/>Tailscale<br/>hostname: app1]
+                APP1[firefly<br/>:8000]
+            end
+
+            subgraph NS2["Shared Network Namespace"]
+                TS2[ts-glow-worm<br/>Tailscale<br/>hostname: app2]
+                APP2[glow-worm<br/>:8000]
+            end
+
+            CADDY[Caddy<br/>:80 / :443<br/>LAN reverse proxy]
+        end
+
+        subgraph OC_NETWORK["openclaw-network (10.89.2.0/24)"]
+            subgraph NS3["Shared Network Namespace"]
+                TS3[ts-openclaw<br/>Tailscale<br/>hostname: openclaw]
+                OPENCLAW[OpenClaw<br/>:18789 Web UI]
+            end
+        end
+    end
+
+    %% Tailscale tunnels
+    TS1 -.->|"encrypted tunnel"| TS
+    TS2 -.->|"encrypted tunnel"| TS
+    TS3 -.->|"encrypted tunnel"| TS
+
+    %% LAN access via Caddy only
+    LAN_CLIENT -->|":80/:443"| CADDY
+    CADDY -->|"reverse_proxy"| TS1
+    CADDY -->|"reverse_proxy"| TS2
+
+    %% DB connections
+    APP1 -->|"DATABASE_URL"| POSTGRES
+    APP2 -->|"DATABASE_URL"| POSTGRES
+
+    classDef tailscale fill:#4c8bf5,stroke:#333,color:#fff
+    classDef app fill:#34a853,stroke:#333,color:#fff
+    classDef db fill:#fbbc04,stroke:#333,color:#000
+    classDef proxy fill:#ea4335,stroke:#333,color:#fff
+    classDef openclaw fill:#9334e6,stroke:#333,color:#fff
+    classDef secrets fill:#ff6d01,stroke:#333,color:#fff
+
+    class TS1,TS2,TS3 tailscale
+    class APP1,APP2 app
+    class POSTGRES db
+    class CADDY proxy
+    class OPENCLAW openclaw
+    class SOPS,AGE_KEY secrets

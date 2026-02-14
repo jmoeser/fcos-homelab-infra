@@ -1,0 +1,3 @@
+# postgres-data.volume — Persistent storage for PostgreSQL
+[Volume]
+VolumeName=postgres-data

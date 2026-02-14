@@ -1,0 +1,31 @@
+# ts-openclaw.container — Tailscale sidecar for OpenClaw
+# OpenClaw will share this container's network namespace.
+# Appears on your tailnet as "openclaw" (or whatever TS_HOSTNAME is set to).
+
+[Unit]
+Description=Tailscale sidecar for OpenClaw
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=ts-openclaw
+Image=ghcr.io/tailscale/tailscale:latest
+AutoUpdate=registry
+
+Network=openclaw-network.network
+EnvironmentFile=/home/openclaw/.config/coreos-gitops/tailscale-openclaw.env
+
+Volume=ts-openclaw-state.volume:/var/lib/tailscale:Z
+
+AddDevice=/dev/net/tun:/dev/net/tun
+AddCapability=CAP_NET_ADMIN
+AddCapability=CAP_NET_RAW
+
+PodmanArgs=--memory=128m --cpus=0.25
+
+[Service]
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target default.target
