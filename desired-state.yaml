@@ -8,6 +8,9 @@ packages:
     - tmux
     - git
     - strace
+    - NetworkManager-wifi
+    - wpa_supplicant
+    - wireless-regdb
     # Required for secret decryption
     - age
     - sops

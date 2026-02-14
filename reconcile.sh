@@ -172,6 +172,10 @@ sync_repo() {
             log "No REPO_URL set and repo exists. Running in local mode."
             return 0
         fi
+        if [[ -d "${REPO_DIR}" ]]; then
+            log "Stale repo dir without .git found — removing"
+            rm -rf "${REPO_DIR}"
+        fi
         log "Cloning repo ${REPO_URL} → ${REPO_DIR}"
         git clone --branch "${REPO_BRANCH}" "${REPO_URL}" "${REPO_DIR}"
     else
