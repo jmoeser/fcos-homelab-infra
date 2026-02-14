@@ -19,6 +19,7 @@ Network=app-network.network
 EnvironmentFile=/etc/coreos-gitops/tailscale-firefly.env
 
 Volume=ts-firefly-state.volume:/var/lib/tailscale:Z
+Volume=/etc/coreos-gitops/ts-serve/firefly-serve.json:/config/serve.json:ro,Z
 
 # Tailscale needs tun device and NET_ADMIN
 AddDevice=/dev/net/tun:/dev/net/tun

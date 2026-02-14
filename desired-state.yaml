@@ -119,6 +119,14 @@ files:
     target: /etc/coreos-gitops/age-recipients.txt
     mode: "0644"
 
+  - source: etc/coreos-gitops/ts-serve/firefly-serve.json
+    target: /etc/coreos-gitops/ts-serve/firefly-serve.json
+    mode: "0644"
+
+  - source: etc/coreos-gitops/ts-serve/glow-worm-serve.json
+    target: /etc/coreos-gitops/ts-serve/glow-worm-serve.json
+    mode: "0644"
+
   - source: etc/sysctl.d/99-custom.conf
     target: /etc/sysctl.d/99-custom.conf
     mode: "0644"
