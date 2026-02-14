@@ -38,7 +38,8 @@ secrets:
     mode: "0600"
 
   - source: tailscale-openclaw.env
-    target: /etc/coreos-gitops/tailscale-openclaw.env
+    target: /var/home/openclaw/.config/coreos-gitops/tailscale-openclaw.env
+    owner: openclaw
     mode: "0600"
 
   - source: firefly.env
@@ -50,7 +51,8 @@ secrets:
     mode: "0600"
 
   - source: openclaw.env
-    target: /etc/coreos-gitops/openclaw.env
+    target: /var/home/openclaw/.config/coreos-gitops/openclaw.env
+    owner: openclaw
     mode: "0600"
 
   - source: rclone.conf

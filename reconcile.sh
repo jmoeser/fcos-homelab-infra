@@ -161,10 +161,11 @@ decrypt_secrets() {
     while IFS= read -r entry; do
         [[ -z "${entry}" ]] && continue
 
-        local source target mode
+        local source target mode owner
         source=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['source'])")
         target=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['target'])")
         mode=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('mode','0600'))")
+        owner=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('owner','root'))")
 
         local src="${secrets_dir}/${source}"
 
@@ -193,7 +194,10 @@ decrypt_secrets() {
             cp "${src}" "${tmp_decrypted}"
         fi
 
-        mkdir -p "$(dirname "${target}")"
+        local target_dir
+        target_dir="$(dirname "${target}")"
+        mkdir -p "${target_dir}"
+        chown "${owner}:${owner}" "${target_dir}"
 
         if [[ -f "${target}" ]] && diff -q "${tmp_decrypted}" "${target}" &>/dev/null; then
             rm -f "${tmp_decrypted}"
@@ -203,7 +207,7 @@ decrypt_secrets() {
         log "Deploying secret: ${source} → ${target}"
         cp "${tmp_decrypted}" "${target}"
         chmod "${mode}" "${target}"
-        chown root:root "${target}"
+        chown "${owner}:${owner}" "${target}"
         rm -f "${tmp_decrypted}"
         secrets_changed=1
         CHANGES_MADE=1
