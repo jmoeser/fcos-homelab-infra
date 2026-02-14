@@ -91,6 +91,27 @@ acquire_lock() {
     fi
 }
 
+# Ensure all directories from a user's home down to the given path are owned
+# by that user. Fixes the case where mkdir -p creates intermediate dirs as root.
+chown_user_path() {
+    local user="$1" target_dir="$2"
+    local home_dir
+    home_dir=$(eval echo "~${user}")
+
+    # Walk from target_dir up to (but not including) home_dir, collecting dirs
+    local dir="${target_dir}"
+    local -a dirs_to_fix=()
+    while [[ "${dir}" != "${home_dir}" && "${dir}" != "/" ]]; do
+        dirs_to_fix+=("${dir}")
+        dir=$(dirname "${dir}")
+    done
+
+    # Chown each directory (leaf first is fine, order doesn't matter)
+    for d in "${dirs_to_fix[@]}"; do
+        chown "${user}:${user}" "${d}"
+    done
+}
+
 # ---------------------------------------------------------------------------
 # Ensure sops binary is installed (not available via Fedora repos)
 # ---------------------------------------------------------------------------
@@ -197,7 +218,11 @@ decrypt_secrets() {
         local target_dir
         target_dir="$(dirname "${target}")"
         mkdir -p "${target_dir}"
-        chown "${owner}:${owner}" "${target_dir}"
+        if [[ "${owner}" != "root" ]]; then
+            chown_user_path "${owner}" "${target_dir}"
+        else
+            chown "${owner}:${owner}" "${target_dir}"
+        fi
 
         if [[ -f "${target}" ]] && diff -q "${tmp_decrypted}" "${target}" &>/dev/null; then
             rm -f "${tmp_decrypted}"
@@ -431,7 +456,7 @@ if isinstance(data, list):
         fi
 
         mkdir -p "${target_dir}"
-        chown "${user}:${user}" "${target_dir}"
+        chown_user_path "${user}" "${target_dir}"
 
         local units_changed=0
         local -a changed_containers=()
