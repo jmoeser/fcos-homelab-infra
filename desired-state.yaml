@@ -4,16 +4,18 @@
 # --- rpm-ostree layer packages ---
 packages:
   install:
-    - htop
-    - tmux
+    # - htop
+    # - tmux
     - git
-    - strace
+    - python3
+    - python3-pyyaml
+    # - strace
     - NetworkManager-wifi
     - wpa_supplicant
     - wireless-regdb
-    # Required for secret decryption
+    - iwlwifi-mvm-firmware
+    # Required for secret decryption (age only; sops installed as binary)
     - age
-    - sops
     # Required for B2 backups
     - rclone
   remove: []
@@ -83,7 +85,7 @@ quadlet:
 user_quadlets:
   - user: openclaw
     source_dir: quadlet/openclaw
-    target_dir: /home/openclaw/.config/containers/systemd
+    target_dir: /var/home/openclaw/.config/containers/systemd
     units:
       - openclaw-network.network
       - ts-openclaw-state.volume
@@ -147,3 +149,4 @@ reconciler:
   log_identifier: coreos-reconciler
   auto_reboot: false
   max_drift_minutes: 30
+  sops_version: "3.11.0"

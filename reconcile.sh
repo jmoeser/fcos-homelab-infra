@@ -3,7 +3,8 @@
 # Reads desired-state.yaml and converges the system to match.
 # Decrypts SOPS-encrypted secrets using age before deploying.
 #
-# Dependencies: bash, git, python3, sops, age (installed via rpm-ostree)
+# Dependencies: bash, git, python3, age (installed via rpm-ostree)
+#               sops (downloaded as binary by this script)
 # Logging: systemd journal under identifier "coreos-reconciler"
 
 set -euo pipefail
@@ -87,6 +88,49 @@ acquire_lock() {
     exec 200>"${LOCK_FILE}"
     if ! flock -n 200; then
         die "Another reconciler instance is running. Exiting."
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Ensure sops binary is installed (not available via Fedora repos)
+# ---------------------------------------------------------------------------
+ensure_sops() {
+    local desired_version
+    desired_version=$(yaml_get '.reconciler.sops_version' 2>/dev/null || echo "3.11.0")
+
+    local sops_bin="/usr/local/bin/sops"
+
+    if [[ -x "${sops_bin}" ]]; then
+        local current_version
+        current_version=$("${sops_bin}" --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' || echo "")
+        if [[ "${current_version}" == "${desired_version}" ]]; then
+            return 0
+        fi
+        log "sops version mismatch: have ${current_version}, want ${desired_version}"
+    fi
+
+    log "Installing sops v${desired_version}..."
+
+    local arch
+    arch=$(uname -m)
+    case "${arch}" in
+        x86_64)  arch="amd64" ;;
+        aarch64) arch="arm64" ;;
+        *)       die "Unsupported architecture for sops: ${arch}" ;;
+    esac
+
+    local url="https://github.com/getsops/sops/releases/download/v${desired_version}/sops-v${desired_version}.linux.${arch}"
+    local tmp_bin
+    tmp_bin=$(mktemp)
+
+    if curl -fsSL -o "${tmp_bin}" "${url}"; then
+        chmod 0755 "${tmp_bin}"
+        mv "${tmp_bin}" "${sops_bin}"
+        log "sops v${desired_version} installed to ${sops_bin}"
+    else
+        rm -f "${tmp_bin}"
+        err "Failed to download sops v${desired_version} from ${url}"
+        return 1
     fi
 }
 
@@ -651,6 +695,16 @@ main() {
     if [[ ! -f "${STATE_FILE}" ]]; then
         die "State file not found: ${STATE_FILE}"
     fi
+
+    # Bootstrap: ensure python3-pyyaml is available before any YAML parsing
+    if ! python3 -c "import yaml" 2>/dev/null; then
+        log "PyYAML not found — bootstrapping python3-pyyaml..."
+        rpm-ostree install --idempotent --apply-live python3-pyyaml
+        log "python3-pyyaml bootstrapped."
+    fi
+
+    # Ensure sops binary is available (not in Fedora repos)
+    ensure_sops
 
     # Decrypt secrets first — env files must be in place before containers start
     decrypt_secrets
