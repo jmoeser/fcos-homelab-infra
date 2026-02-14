@@ -31,6 +31,7 @@ Volume=openclaw-config.volume:/home/node/.openclaw:Z
 Volume=openclaw-workspace.volume:/home/node/openclaw/workspace:Z
 
 # Environment
+EnvironmentFile=%h/.config/coreos-gitops/openclaw.env
 
 # Mount the openclaw USER's rootless Podman socket
 # This lets OpenClaw spawn sandbox containers via the socket,
@@ -40,15 +41,15 @@ Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
 PodmanArgs=--memory=1g --cpus=2.0
 
 HealthCmd=wget --no-verbose --tries=1 --spider http://localhost:18789/ || exit 1
-HealthInterval=60s
+HealthInterval=30s
 HealthTimeout=10s
 HealthRetries=3
-HealthStartPeriod=60s
+HealthStartPeriod=30s
 
 [Service]
 Restart=always
 RestartSec=15s
-TimeoutStartSec=180
+TimeoutStartSec=300
 
 [Install]
 WantedBy=multi-user.target default.target
