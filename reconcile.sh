@@ -173,12 +173,21 @@ decrypt_secrets() {
             continue
         fi
 
+        # Determine SOPS type from file extension
+        local sops_type
+        case "${source}" in
+            *.env)  sops_type="dotenv" ;;
+            *.conf) sops_type="ini" ;;
+            *)      warn "Unknown secret file type: ${source} — skipping."
+                    continue ;;
+        esac
+
         # Decrypt to a temp file, then compare
         local tmp_decrypted
         tmp_decrypted=$(mktemp)
         trap "rm -f '${tmp_decrypted}'" RETURN
 
-        if ! SOPS_AGE_KEY_FILE="${AGE_KEY_FILE}" sops decrypt --input-type dotenv --output-type dotenv "${src}" > "${tmp_decrypted}" 2>/dev/null; then
+        if ! SOPS_AGE_KEY_FILE="${AGE_KEY_FILE}" sops decrypt --input-type "${sops_type}" --output-type "${sops_type}" "${src}" > "${tmp_decrypted}" 2>/dev/null; then
             # File might not be encrypted (plaintext during dev), try copying as-is
             warn "SOPS decryption failed for ${source} — treating as plaintext."
             cp "${src}" "${tmp_decrypted}"
