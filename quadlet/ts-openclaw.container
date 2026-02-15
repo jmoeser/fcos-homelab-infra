@@ -13,7 +13,7 @@ ContainerName=ts-openclaw
 Image=ghcr.io/tailscale/tailscale:latest
 AutoUpdate=registry
 
-Network=app-network.network
+Network=host
 EnvironmentFile=/etc/coreos-gitops/tailscale-openclaw.env
 
 Volume=ts-openclaw-state.volume:/var/lib/tailscale:Z
