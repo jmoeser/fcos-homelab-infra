@@ -29,9 +29,14 @@ PublishPort=127.0.0.1:18789:18789
 # Persistent storage
 Volume=openclaw-config.volume:/home/node/.openclaw:Z
 Volume=openclaw-workspace.volume:/home/node/openclaw/workspace:Z
+Volume=%h/.config/coreos-gitops/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json:ro,Z
 
 # Environment
 EnvironmentFile=%h/.config/coreos-gitops/openclaw.env
+
+# Bind to all interfaces so rootless port forwarding works.
+# Default CMD binds to loopback; override to add --bind 0.0.0.0.
+Exec=node openclaw.mjs gateway --allow-unconfigured --bind lan
 
 # Mount the openclaw USER's rootless Podman socket
 # This lets OpenClaw spawn sandbox containers via the socket,

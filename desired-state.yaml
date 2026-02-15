@@ -132,6 +132,11 @@ files:
     target: /etc/coreos-gitops/ts-serve/openclaw-serve.json
     mode: "0644"
 
+  - source: etc/coreos-gitops/openclaw/openclaw.json
+    target: /var/home/openclaw/.config/coreos-gitops/openclaw/openclaw.json
+    owner: openclaw
+    mode: "0644"
+
   - source: etc/sysctl.d/99-custom.conf
     target: /etc/sysctl.d/99-custom.conf
     mode: "0644"

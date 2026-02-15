@@ -1,0 +1,6 @@
+{
+  // Trust Tailscale serve proxy running on the host via host networking
+  "gateway": {
+    "trustedProxies": ["127.0.0.1"]
+  }
+}
