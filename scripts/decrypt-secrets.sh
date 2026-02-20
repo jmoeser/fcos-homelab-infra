@@ -1,24 +1,39 @@
 #!/usr/bin/env bash
 # scripts/decrypt-secrets.sh
-# Decrypt all secret files in secrets/ for local editing.
+# Decrypt secret files in hosts/<hostname>/secrets/ for local editing.
 # Supports .env (dotenv) and .conf (ini) formats.
 #
 # Usage:
-#   ./scripts/decrypt-secrets.sh              # Decrypt all secrets
-#   ./scripts/decrypt-secrets.sh postgres.env  # Decrypt a single file
-#   ./scripts/decrypt-secrets.sh rclone.conf   # Decrypt a single .conf file
+#   ./scripts/decrypt-secrets.sh <hostname>              # Decrypt all secrets for a host
+#   ./scripts/decrypt-secrets.sh <hostname> postgres.env  # Decrypt a single file
 #
-# After editing, re-encrypt with: ./scripts/encrypt-secrets.sh
+# After editing, re-encrypt with: ./scripts/encrypt-secrets.sh <hostname>
 #
 # Or use sops directly to edit in-place:
-#   sops secrets/postgres.env
+#   sops hosts/<hostname>/secrets/postgres.env
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SECRETS_DIR="${REPO_ROOT}/secrets"
 
 cd "${REPO_ROOT}"
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <hostname> [file]"
+    echo "Available hosts:"
+    for d in hosts/*/; do
+        echo "  ${d#hosts/}"
+    done
+    exit 1
+fi
+
+HOSTNAME="$1"
+SECRETS_DIR="${REPO_ROOT}/hosts/${HOSTNAME}/secrets"
+
+if [[ ! -d "${SECRETS_DIR}" ]]; then
+    echo "Error: ${SECRETS_DIR} not found."
+    exit 1
+fi
 
 if ! command -v sops &>/dev/null; then
     echo "Error: sops is not installed."
@@ -55,8 +70,8 @@ decrypt_file() {
     sops decrypt --input-type "${sops_type}" --output-type "${sops_type}" --in-place "${file}"
 }
 
-if [[ $# -gt 0 ]]; then
-    target="${SECRETS_DIR}/${1}"
+if [[ $# -gt 1 ]]; then
+    target="${SECRETS_DIR}/${2}"
     if [[ ! -f "${target}" ]]; then
         echo "Error: ${target} not found."
         exit 1

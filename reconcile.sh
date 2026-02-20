@@ -15,7 +15,8 @@ set -euo pipefail
 REPO_DIR="/var/lib/homelab-gitops"
 REPO_URL="${HOMELAB_GITOPS_REPO_URL:-}"
 REPO_BRANCH="${HOMELAB_GITOPS_BRANCH:-main}"
-STATE_FILE="${REPO_DIR}/desired-state.yaml"
+HOST_DIR="${REPO_DIR}/hosts/$(hostname)"
+STATE_FILE="${HOST_DIR}/desired-state.yaml"
 LOCK_FILE="/run/homelab-reconciler.lock"
 LAST_RUN_FILE="/var/lib/homelab-gitops/.last-successful-run"
 LOG_ID="homelab-reconciler"
@@ -161,7 +162,7 @@ ensure_sops() {
 decrypt_secrets() {
     log "Decrypting SOPS-encrypted secrets..."
 
-    local secrets_dir="${REPO_DIR}/secrets"
+    local secrets_dir="${HOST_DIR}/secrets"
     local decrypted_dir="/etc/homelab-gitops"
 
     if [[ ! -d "${secrets_dir}" ]]; then
@@ -323,7 +324,7 @@ reconcile_quadlet() {
     log "Reconciling Quadlet units..."
 
     local source_dir target_dir
-    source_dir="${REPO_DIR}/$(yaml_get '.quadlet.source_dir')"
+    source_dir="${HOST_DIR}/$(yaml_get '.quadlet.source_dir')"
     target_dir="$(yaml_get '.quadlet.target_dir')"
 
     if [[ ! -d "${source_dir}" ]]; then
@@ -407,7 +408,7 @@ if isinstance(data, list):
 
         local user source_dir target_dir
         user=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['user'])")
-        source_dir="${REPO_DIR}/$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['source_dir'])")"
+        source_dir="${HOST_DIR}/$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['source_dir'])")"
         target_dir=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['target_dir'])")
 
         if ! id "${user}" &>/dev/null; then
@@ -496,7 +497,7 @@ reconcile_systemd() {
     log "Reconciling systemd units..."
 
     local source_dir target_dir
-    source_dir="${REPO_DIR}/$(yaml_get '.systemd.source_dir')"
+    source_dir="${HOST_DIR}/$(yaml_get '.systemd.source_dir')"
     target_dir="$(yaml_get '.systemd.target_dir')"
 
     if [[ ! -d "${source_dir}" ]]; then
@@ -564,7 +565,7 @@ reconcile_systemd() {
 reconcile_files() {
     log "Reconciling config files..."
 
-    local files_dir="${REPO_DIR}/files"
+    local files_dir="${HOST_DIR}/files"
 
     while IFS= read -r entry; do
         [[ -z "${entry}" ]] && continue

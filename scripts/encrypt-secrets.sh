@@ -1,24 +1,39 @@
 #!/usr/bin/env bash
 # scripts/encrypt-secrets.sh
-# Encrypt all secret files in secrets/ using SOPS + age.
+# Encrypt secret files in hosts/<hostname>/secrets/ using SOPS + age.
 # Supports .env (dotenv) and .conf (ini) formats.
 #
 # Usage:
-#   ./scripts/encrypt-secrets.sh              # Encrypt all secrets
-#   ./scripts/encrypt-secrets.sh postgres.env  # Encrypt a single file
-#   ./scripts/encrypt-secrets.sh rclone.conf   # Encrypt a single .conf file
+#   ./scripts/encrypt-secrets.sh <hostname>              # Encrypt all secrets for a host
+#   ./scripts/encrypt-secrets.sh <hostname> postgres.env  # Encrypt a single file
 #
 # Prerequisites:
 #   - sops and age installed locally
-#   - .sops.yaml configured with your age public key
+#   - .sops.yaml configured with the host's age public key
 #   - Run from the repo root
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SECRETS_DIR="${REPO_ROOT}/secrets"
 
 cd "${REPO_ROOT}"
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <hostname> [file]"
+    echo "Available hosts:"
+    for d in hosts/*/; do
+        echo "  ${d#hosts/}"
+    done
+    exit 1
+fi
+
+HOSTNAME="$1"
+SECRETS_DIR="${REPO_ROOT}/hosts/${HOSTNAME}/secrets"
+
+if [[ ! -d "${SECRETS_DIR}" ]]; then
+    echo "Error: ${SECRETS_DIR} not found."
+    exit 1
+fi
 
 if ! command -v sops &>/dev/null; then
     echo "Error: sops is not installed. Install with: brew install sops (macOS) or your package manager."
@@ -60,9 +75,9 @@ encrypt_file() {
     sops encrypt --input-type "${sops_type}" --output-type "${sops_type}" --in-place "${file}"
 }
 
-if [[ $# -gt 0 ]]; then
+if [[ $# -gt 1 ]]; then
     # Encrypt specific file
-    target="${SECRETS_DIR}/${1}"
+    target="${SECRETS_DIR}/${2}"
     if [[ ! -f "${target}" ]]; then
         echo "Error: ${target} not found."
         exit 1

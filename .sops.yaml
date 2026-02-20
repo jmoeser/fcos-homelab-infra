@@ -1,2 +1,3 @@
 creation_rules:
-  - age: "age1nxfpm7k3ecq3fddn0mvjqh3jemnd34579stu30jwh9e2ytwmsdjsndy86a"
+  - path_regex: hosts/maelthra/secrets/.*
+    age: "age1nxfpm7k3ecq3fddn0mvjqh3jemnd34579stu30jwh9e2ytwmsdjsndy86a"
