@@ -1,5 +1,5 @@
 ---
-title: CoreOS GitOps — Container Architecture
+title: Homelab GitOps — Container Architecture
 ---
 graph TB
     subgraph Internet/Tailnet
@@ -10,14 +10,14 @@ graph TB
         LAN_CLIENT[LAN Clients]
     end
 
-    subgraph COREOS["Fedora CoreOS Host"]
+    subgraph RPI["Raspberry Pi (Bookworm)"]
         subgraph RECONCILER["GitOps Reconciler (every 30 min)"]
             GIT[("Git Repo")]
             SOPS["SOPS + age<br/>decrypt secrets"]
             GIT --> SOPS
         end
 
-        AGE_KEY["/etc/coreos-gitops/age-key.txt<br/>(deployed via Ignition)"]
+        AGE_KEY["/etc/homelab-gitops/age-key.txt<br/>(deployed via firstrun.sh)"]
         SOPS -.->|"reads"| AGE_KEY
 
         subgraph APP_NETWORK["app-network (10.89.1.0/24)"]

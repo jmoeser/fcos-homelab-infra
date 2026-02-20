@@ -6,7 +6,7 @@
 # The public key goes into .sops.yaml (committed to git).
 # The private key must be:
 #   1. Saved in your password manager
-#   2. Deployed to the CoreOS host at /etc/coreos-gitops/age-key.txt via Ignition
+#   2. Deployed to the host at /etc/homelab-gitops/age-key.txt via rpi-bootstrap/firstrun.sh
 #
 # Usage: ./scripts/init-secrets.sh
 
@@ -24,7 +24,7 @@ if ! command -v sops &>/dev/null; then
     exit 1
 fi
 
-echo "=== CoreOS GitOps Secret Setup ==="
+echo "=== Homelab GitOps Secret Setup ==="
 echo ""
 
 # Generate age keypair
@@ -55,15 +55,9 @@ echo "1. Copy the private key to your password manager:"
 echo ""
 cat "${KEY_FILE}"
 echo ""
-echo "2. Add the private key to your Butane/Ignition config:"
+echo "2. Add the private key to rpi-bootstrap/firstrun.sh (the AGE_EOF heredoc section):"
 echo ""
-echo "   storage:"
-echo "     files:"
-echo "       - path: /etc/coreos-gitops/age-key.txt"
-echo "         mode: 0600"
-echo "         contents:"
-echo "           inline: |"
-sed 's/^/             /' "${KEY_FILE}"
+echo "   The key goes into: /etc/homelab-gitops/age-key.txt on the host"
 echo ""
 echo "3. For local SOPS usage, copy the key to the default location:"
 echo ""
@@ -76,4 +70,4 @@ echo ""
 
 # Clean up temp file reminder
 echo "The private key is at: ${KEY_FILE}"
-echo "Delete it after saving to your password manager and Ignition config."
+echo "Delete it after saving to your password manager and firstrun.sh."

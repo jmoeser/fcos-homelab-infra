@@ -1,61 +1,55 @@
 # desired-state.yaml
-# Single source of truth for this CoreOS machine's configuration.
+# Single source of truth for this Raspberry Pi's configuration.
 
-# --- rpm-ostree layer packages ---
+# --- apt packages ---
 packages:
   install:
     # - htop
     # - tmux
     - git
     - python3
-    - python3-pyyaml
+    - python3-yaml
     # - strace
-    - NetworkManager-wifi
-    - wpa_supplicant
-    - wireless-regdb
-    - iwlwifi-mvm-firmware
-    # Required for secret decryption (age only; sops installed as binary)
-    - age
     # Required for B2 backups
     - rclone
   remove: []
 
 # --- SOPS-encrypted secrets ---
 # Files in secrets/ are encrypted with age via SOPS.
-# The reconciler decrypts them using the age key at /etc/coreos-gitops/age-key.txt
+# The reconciler decrypts them using the age key at /etc/homelab-gitops/age-key.txt
 # and deploys the plaintext to the target path with restricted permissions.
 secrets:
   - source: postgres.env
-    target: /etc/coreos-gitops/postgres.env
+    target: /etc/homelab-gitops/postgres.env
     mode: "0600"
 
   - source: tailscale-firefly.env
-    target: /etc/coreos-gitops/tailscale-firefly.env
+    target: /etc/homelab-gitops/tailscale-firefly.env
     mode: "0600"
 
   - source: tailscale-glow-worm.env
-    target: /etc/coreos-gitops/tailscale-glow-worm.env
+    target: /etc/homelab-gitops/tailscale-glow-worm.env
     mode: "0600"
 
   - source: tailscale-openclaw.env
-    target: /etc/coreos-gitops/tailscale-openclaw.env
+    target: /etc/homelab-gitops/tailscale-openclaw.env
     mode: "0600"
 
   - source: firefly.env
-    target: /etc/coreos-gitops/firefly.env
+    target: /etc/homelab-gitops/firefly.env
     mode: "0600"
 
   - source: glow-worm.env
-    target: /etc/coreos-gitops/glow-worm.env
+    target: /etc/homelab-gitops/glow-worm.env
     mode: "0600"
 
   - source: openclaw.env
-    target: /var/home/openclaw/.config/coreos-gitops/openclaw.env
+    target: /home/openclaw/.config/homelab-gitops/openclaw.env
     owner: openclaw
     mode: "0600"
 
   - source: rclone.conf
-    target: /etc/coreos-gitops/rclone.conf
+    target: /etc/homelab-gitops/rclone.conf
     mode: "0600"
 
 # --- Podman Quadlet containers ---
@@ -88,11 +82,10 @@ quadlet:
 user_quadlets:
   - user: openclaw
     source_dir: quadlet/openclaw
-    target_dir: /var/home/openclaw/.config/containers/systemd
+    target_dir: /home/openclaw/.config/containers/systemd
     units:
       - openclaw-network.network
       - openclaw-config.volume
-      - openclaw-workspace.volume
       - openclaw.container
 
 # --- Systemd units ---
@@ -112,28 +105,28 @@ files:
     mode: "0644"
     reload_cmd: podman exec caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true
 
-  - source: etc/coreos-gitops/pg-init/init-databases.sh
-    target: /etc/coreos-gitops/pg-init/init-databases.sh
+  - source: etc/homelab-gitops/pg-init/init-databases.sh
+    target: /etc/homelab-gitops/pg-init/init-databases.sh
     mode: "0755"
 
-  - source: etc/coreos-gitops/age-recipients.txt
-    target: /etc/coreos-gitops/age-recipients.txt
+  - source: etc/homelab-gitops/age-recipients.txt
+    target: /etc/homelab-gitops/age-recipients.txt
     mode: "0644"
 
-  - source: etc/coreos-gitops/ts-serve/firefly-serve.json
-    target: /etc/coreos-gitops/ts-serve/firefly-serve.json
+  - source: etc/homelab-gitops/ts-serve/firefly-serve.json
+    target: /etc/homelab-gitops/ts-serve/firefly-serve.json
     mode: "0644"
 
-  - source: etc/coreos-gitops/ts-serve/glow-worm-serve.json
-    target: /etc/coreos-gitops/ts-serve/glow-worm-serve.json
+  - source: etc/homelab-gitops/ts-serve/glow-worm-serve.json
+    target: /etc/homelab-gitops/ts-serve/glow-worm-serve.json
     mode: "0644"
 
-  - source: etc/coreos-gitops/ts-serve/openclaw-serve.json
-    target: /etc/coreos-gitops/ts-serve/openclaw-serve.json
+  - source: etc/homelab-gitops/ts-serve/openclaw-serve.json
+    target: /etc/homelab-gitops/ts-serve/openclaw-serve.json
     mode: "0644"
 
-  - source: etc/coreos-gitops/openclaw/openclaw.json
-    target: /var/home/openclaw/.config/coreos-gitops/openclaw/openclaw.json
+  - source: etc/homelab-gitops/openclaw/openclaw.json
+    target: /home/openclaw/.config/homelab-gitops/openclaw/openclaw.json
     owner: openclaw
     mode: "0644"
 
@@ -164,7 +157,7 @@ sysctl:
 # --- Reconciler settings ---
 reconciler:
   interval_minutes: 5
-  log_identifier: coreos-reconciler
+  log_identifier: homelab-reconciler
   auto_reboot: false
   max_drift_minutes: 30
   sops_version: "3.11.0"

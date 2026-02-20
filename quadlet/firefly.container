@@ -10,6 +10,8 @@
 Description=Firefly III
 After=postgres.service ts-firefly.service
 Requires=postgres.service ts-firefly.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Container]
 ContainerName=firefly

@@ -8,7 +8,7 @@
 #   4. Upload to Backblaze B2 via rclone
 #   5. Prune backups older than retention period
 #
-# Deployed to: /var/lib/coreos-gitops/scripts/pg-backup.sh
+# Deployed to: /var/lib/homelab-gitops/scripts/pg-backup.sh
 # Triggered by: pg-backup.timer (systemd)
 
 set -euo pipefail
@@ -16,18 +16,18 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Config — overridable via environment
 # ---------------------------------------------------------------------------
-BACKUP_DIR="${PG_BACKUP_DIR:-/var/lib/coreos-gitops/backups}"
+BACKUP_DIR="${PG_BACKUP_DIR:-/var/lib/homelab-gitops/backups}"
 RCLONE_REMOTE="${PG_BACKUP_RCLONE_REMOTE:-b2}"
-RCLONE_BUCKET="${PG_BACKUP_RCLONE_BUCKET:-coreos-pg-backups}"
-RCLONE_CONFIG="${RCLONE_CONFIG:-/etc/coreos-gitops/rclone.conf}"
-AGE_RECIPIENT_FILE="${PG_BACKUP_AGE_RECIPIENTS:-/etc/coreos-gitops/age-recipients.txt}"
-AGE_KEY_FILE="${PG_BACKUP_AGE_KEY:-/etc/coreos-gitops/age-key.txt}"
+RCLONE_BUCKET="${PG_BACKUP_RCLONE_BUCKET:-homelab-pg-backups}"
+RCLONE_CONFIG="${RCLONE_CONFIG:-/etc/homelab-gitops/rclone.conf}"
+AGE_RECIPIENT_FILE="${PG_BACKUP_AGE_RECIPIENTS:-/etc/homelab-gitops/age-recipients.txt}"
+AGE_KEY_FILE="${PG_BACKUP_AGE_KEY:-/etc/homelab-gitops/age-key.txt}"
 RETENTION_DAYS="${PG_BACKUP_RETENTION_DAYS:-30}"
 PG_CONTAINER="${PG_BACKUP_CONTAINER:-postgres}"
 LOG_ID="pg-backup"
 
 # Read Postgres credentials from the deployed env file
-PG_ENV_FILE="/etc/coreos-gitops/postgres.env"
+PG_ENV_FILE="/etc/homelab-gitops/postgres.env"
 
 # ---------------------------------------------------------------------------
 # Helpers

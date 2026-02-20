@@ -9,6 +9,8 @@
 Description=Caddy reverse proxy (LAN)
 After=network-online.target ts-firefly.service ts-glow-worm.service
 Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Container]
 ContainerName=caddy

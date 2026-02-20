@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
-# reconcile.sh — Idempotent GitOps reconciler for Fedora CoreOS
+# reconcile.sh — Idempotent GitOps reconciler for Raspberry Pi OS (Debian Bookworm)
 # Reads desired-state.yaml and converges the system to match.
 # Decrypts SOPS-encrypted secrets using age before deploying.
 #
-# Dependencies: bash, git, python3, age (installed via rpm-ostree)
-#               sops (downloaded as binary by this script)
-# Logging: systemd journal under identifier "coreos-reconciler"
+# Dependencies: bash, git, python3, python3-yaml, age, sops
+#               (age + sops installed by firstrun.sh; managed here thereafter)
+# Logging: systemd journal under identifier "homelab-reconciler"
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-REPO_DIR="/var/lib/coreos-gitops"
-REPO_URL="${COREOS_GITOPS_REPO_URL:-}"
-REPO_BRANCH="${COREOS_GITOPS_BRANCH:-main}"
+REPO_DIR="/var/lib/homelab-gitops"
+REPO_URL="${HOMELAB_GITOPS_REPO_URL:-}"
+REPO_BRANCH="${HOMELAB_GITOPS_BRANCH:-main}"
 STATE_FILE="${REPO_DIR}/desired-state.yaml"
-LOCK_FILE="/run/coreos-reconciler.lock"
-LAST_RUN_FILE="/var/lib/coreos-gitops/.last-successful-run"
-LOG_ID="coreos-reconciler"
+LOCK_FILE="/run/homelab-reconciler.lock"
+LAST_RUN_FILE="/var/lib/homelab-gitops/.last-successful-run"
+LOG_ID="homelab-reconciler"
 
-# Age key for SOPS decryption — deployed via Ignition on first boot
-AGE_KEY_FILE="/etc/coreos-gitops/age-key.txt"
+# Age key for SOPS decryption — deployed via firstrun.sh on first boot
+AGE_KEY_FILE="/etc/homelab-gitops/age-key.txt"
 
 CHANGES_MADE=0
 REBOOT_NEEDED=0
@@ -162,7 +162,7 @@ decrypt_secrets() {
     log "Decrypting SOPS-encrypted secrets..."
 
     local secrets_dir="${REPO_DIR}/secrets"
-    local decrypted_dir="/etc/coreos-gitops"
+    local decrypted_dir="/etc/homelab-gitops"
 
     if [[ ! -d "${secrets_dir}" ]]; then
         log "No secrets directory found. Skipping decryption."
@@ -171,7 +171,7 @@ decrypt_secrets() {
 
     if [[ ! -f "${AGE_KEY_FILE}" ]]; then
         err "Age key file not found at ${AGE_KEY_FILE}. Cannot decrypt secrets."
-        err "Deploy the age private key via Ignition on first boot."
+        err "Deploy the age private key via firstrun.sh on first boot."
         return 1
     fi
 
@@ -282,10 +282,10 @@ sync_repo() {
 }
 
 # ---------------------------------------------------------------------------
-# rpm-ostree packages
+# apt packages
 # ---------------------------------------------------------------------------
 reconcile_packages() {
-    log "Reconciling rpm-ostree packages..."
+    log "Reconciling apt packages..."
 
     local -a desired_install=()
     while IFS= read -r pkg; do
@@ -297,43 +297,17 @@ reconcile_packages() {
         return 0
     fi
 
-    local -a current_overlays=()
-    while IFS= read -r pkg; do
-        current_overlays+=("${pkg}")
-    done < <(rpm-ostree status --json | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-deploy = data['deployments'][0]
-for p in deploy.get('requested-packages', []):
-    print(p)
-" 2>/dev/null || true)
-
     local -a to_install=()
     for pkg in "${desired_install[@]}"; do
-        local found=0
-        for cur in "${current_overlays[@]}"; do
-            if [[ "${cur}" == "${pkg}" ]]; then
-                found=1
-                break
-            fi
-        done
-        if [[ ${found} -eq 0 ]]; then
+        if ! dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q "install ok installed"; then
             to_install+=("${pkg}")
         fi
     done
 
     if [[ ${#to_install[@]} -gt 0 ]]; then
         log "Installing packages: ${to_install[*]}"
-        if rpm-ostree install --idempotent --allow-inactive "${to_install[@]}"; then
+        if DEBIAN_FRONTEND=noninteractive apt-get install -y "${to_install[@]}"; then
             CHANGES_MADE=1
-            if rpm-ostree status --json | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-sys.exit(0 if len(data['deployments']) > 1 else 1)
-" 2>/dev/null; then
-                warn "rpm-ostree changes staged. Reboot required."
-                REBOOT_NEEDED=1
-            fi
         else
             err "Failed to install packages: ${to_install[*]}"
         fi
@@ -734,14 +708,14 @@ main() {
         die "State file not found: ${STATE_FILE}"
     fi
 
-    # Bootstrap: ensure python3-pyyaml is available before any YAML parsing
+    # Bootstrap: ensure python3-yaml is available before any YAML parsing
     if ! python3 -c "import yaml" 2>/dev/null; then
-        log "PyYAML not found — bootstrapping python3-pyyaml..."
-        rpm-ostree install --idempotent --apply-live python3-pyyaml
-        log "python3-pyyaml bootstrapped."
+        log "PyYAML not found — bootstrapping python3-yaml..."
+        DEBIAN_FRONTEND=noninteractive apt-get install -y python3-yaml
+        log "python3-yaml bootstrapped."
     fi
 
-    # Ensure sops binary is available (not in Fedora repos)
+    # Ensure sops is at the desired version (managed as a downloaded binary)
     ensure_sops
 
     # Decrypt secrets first — env files must be in place before containers start
@@ -769,9 +743,9 @@ main() {
         auto_reboot=$(yaml_get '.reconciler.auto_reboot' 2>/dev/null || echo "false")
         if [[ "${auto_reboot}" == "True" || "${auto_reboot}" == "true" ]]; then
             warn "Auto-reboot enabled. Rebooting in 60 seconds..."
-            shutdown -r +1 "CoreOS reconciler: rpm-ostree changes require reboot"
+            shutdown -r +1 "homelab-reconciler: reboot required"
         else
-            warn "Reboot required for rpm-ostree changes. Auto-reboot is disabled."
+            warn "Reboot required. Auto-reboot is disabled."
         fi
     fi
 }

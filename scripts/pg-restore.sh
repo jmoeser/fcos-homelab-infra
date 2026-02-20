@@ -20,11 +20,11 @@
 set -euo pipefail
 
 RCLONE_REMOTE="${PG_BACKUP_RCLONE_REMOTE:-b2}"
-RCLONE_BUCKET="${PG_BACKUP_RCLONE_BUCKET:-coreos-pg-backups}"
-RCLONE_CONFIG="${RCLONE_CONFIG:-/etc/coreos-gitops/rclone.conf}"
-AGE_KEY_FILE="${PG_BACKUP_AGE_KEY:-/etc/coreos-gitops/age-key.txt}"
+RCLONE_BUCKET="${PG_BACKUP_RCLONE_BUCKET:-homelab-pg-backups}"
+RCLONE_CONFIG="${RCLONE_CONFIG:-/etc/homelab-gitops/rclone.conf}"
+AGE_KEY_FILE="${PG_BACKUP_AGE_KEY:-/etc/homelab-gitops/age-key.txt}"
 PG_CONTAINER="${PG_BACKUP_CONTAINER:-postgres}"
-PG_ENV_FILE="/etc/coreos-gitops/postgres.env"
+PG_ENV_FILE="/etc/homelab-gitops/postgres.env"
 
 log() { echo "[INFO]  $*"; }
 err() { echo "[ERROR] $*" >&2; }

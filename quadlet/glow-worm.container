@@ -5,6 +5,8 @@
 Description=Glow Worm
 After=postgres.service ts-glow-worm.service
 Requires=postgres.service ts-glow-worm.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Container]
 ContainerName=glow-worm
