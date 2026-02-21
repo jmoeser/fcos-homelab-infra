@@ -19,6 +19,7 @@ AutoUpdate=registry
 
 Network=app-network.network
 IP=10.89.1.3
+DNS=1.1.1.1
 EnvironmentFile=/etc/homelab-gitops/tailscale-ollama.env
 
 Volume=ts-ollama-state.volume:/var/lib/tailscale:Z

@@ -15,6 +15,7 @@ AutoUpdate=registry
 
 Network=app-network.network
 IP=10.89.1.2
+DNS=1.1.1.1
 EnvironmentFile=/etc/homelab-gitops/tailscale-glow-worm.env
 
 Volume=ts-glow-worm-state.volume:/var/lib/tailscale:Z
