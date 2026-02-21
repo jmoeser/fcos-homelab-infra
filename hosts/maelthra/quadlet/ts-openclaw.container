@@ -26,6 +26,11 @@ AddDevice=/dev/net/tun:/dev/net/tun
 AddCapability=CAP_NET_ADMIN
 AddCapability=CAP_NET_RAW
 
+NoNewPrivileges=true
+ReadOnly=true
+Tmpfs=/tmp
+Tmpfs=/var/run
+
 PodmanArgs=--memory=128m --cpus=0.25
 
 [Service]
