@@ -14,6 +14,7 @@ Image=ghcr.io/tailscale/tailscale:latest
 AutoUpdate=registry
 
 Network=app-network.network
+IP=10.89.1.2
 EnvironmentFile=/etc/coreos-gitops/tailscale-glow-worm.env
 
 Volume=ts-glow-worm-state.volume:/var/lib/tailscale:Z
