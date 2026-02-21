@@ -747,10 +747,10 @@ main() {
     decrypt_secrets
 
     reconcile_packages
+    reconcile_files
     reconcile_quadlet
     reconcile_user_quadlets
     reconcile_systemd
-    reconcile_files
     reconcile_firewall
     reconcile_sysctl
 

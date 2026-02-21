@@ -25,7 +25,7 @@ sops hosts/<hostname>/secrets/postgres.env             # Edit a secret in-place 
 
 ## Architecture
 
-- **`reconcile.sh`** — Main bash script. Runs as root on the Pi. Reconciliation order: secrets → packages → quadlet → user quadlets → systemd → files → firewall → sysctl. All operations are idempotent (diff before copy, skip if unchanged).
+- **`reconcile.sh`** — Main bash script. Runs as root on the Pi. Reconciliation order: secrets → packages → files → quadlet → user quadlets → systemd → firewall → sysctl. All operations are idempotent (diff before copy, skip if unchanged).
 - **`hosts/<hostname>/`** — Per-machine directory. Each machine has its own `desired-state.yaml` and subdirectories. The reconciler selects the correct directory using `$(hostname)` at runtime.
 - **`hosts/<hostname>/desired-state.yaml`** — Declares everything for that machine: apt packages, SOPS-encrypted secrets, Podman Quadlet units (root and per-user), systemd units, config files, firewall rules, sysctl params, and reconciler settings.
 - **`hosts/<hostname>/quadlet/`** — Root-level Podman Quadlet files (`.container`, `.network`, `.volume`) deployed to `/etc/containers/systemd/`.
