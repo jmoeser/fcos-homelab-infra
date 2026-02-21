@@ -570,10 +570,11 @@ reconcile_files() {
     while IFS= read -r entry; do
         [[ -z "${entry}" ]] && continue
 
-        local source target mode reload_cmd
+        local source target mode owner reload_cmd
         source=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['source'])")
         target=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['target'])")
         mode=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('mode','0644'))")
+        owner=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('owner','root'))")
         reload_cmd=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('reload_cmd',''))")
 
         local src="${files_dir}/${source}"
@@ -583,7 +584,14 @@ reconcile_files() {
             continue
         fi
 
-        mkdir -p "$(dirname "${target}")"
+        local target_dir
+        target_dir="$(dirname "${target}")"
+        mkdir -p "${target_dir}"
+        if [[ "${owner}" != "root" ]]; then
+            chown_user_path "${owner}" "${target_dir}"
+        else
+            chown "${owner}:${owner}" "${target_dir}"
+        fi
 
         if [[ -f "${target}" ]] && diff -q "${src}" "${target}" &>/dev/null; then
             continue
@@ -592,6 +600,7 @@ reconcile_files() {
         log "Syncing file: ${source} → ${target}"
         cp "${src}" "${target}"
         chmod "${mode}" "${target}"
+        chown "${owner}:${owner}" "${target}"
         CHANGES_MADE=1
 
         if [[ -n "${reload_cmd}" ]]; then

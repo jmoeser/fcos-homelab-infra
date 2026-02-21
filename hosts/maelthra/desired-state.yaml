@@ -143,7 +143,7 @@ files:
   - source: etc/homelab-gitops/openclaw/openclaw.json
     target: /home/openclaw/.config/homelab-gitops/openclaw/openclaw.json
     owner: openclaw
-    mode: "0644"
+    mode: "0600"
 
   - source: etc/sysctl.d/99-custom.conf
     target: /etc/sysctl.d/99-custom.conf
@@ -166,17 +166,17 @@ firewall:
     # Note: OpenClaw is now only reachable via Tailscale — no LAN port needed
   forward_allow:
     # ACCEPT rules evaluated before the REJECT rules below (order matters).
-    - -s 10.89.2.0/24 -d 10.89.1.0/24 -p tcp --dport 8000 -j ACCEPT   # glow-worm MCP server
-    - -s 10.89.2.0/24 -d 10.89.1.3 -p tcp --dport 11434 -j ACCEPT      # ollama API
+    - -s 10.89.2.0/24 -d 10.89.1.0/24 -p tcp --dport 8000 -j ACCEPT # glow-worm MCP server
+    - -s 10.89.2.0/24 -d 10.89.1.3 -p tcp --dport 11434 -j ACCEPT # ollama API
   forward_rules:
     # Prevent openclaw-network (10.89.2.0/24) from reaching local/internal networks.
     # Allows outbound internet access only. Applied to the HOMELAB-FORWARD chain.
     # NOTE: Requires rootless Podman to use netavark bridge (not slirp4netns) to take effect.
     # Verify with: iptables -L HOMELAB-FORWARD -n -v
-    - -s 10.89.2.0/24 -d 192.168.0.0/16 -j REJECT    # home LAN
-    - -s 10.89.2.0/24 -d 10.89.1.0/24 -j REJECT       # app-network (postgres, other services)
-    - -s 10.89.2.0/24 -d 172.16.0.0/12 -j REJECT      # RFC1918 172.16-31.x
-    - -s 10.89.2.0/24 -d 100.64.0.0/10 -j REJECT      # Tailscale CGNAT (prevent reaching tailnet peers)
+    - -s 10.89.2.0/24 -d 192.168.0.0/16 -j REJECT # home LAN
+    - -s 10.89.2.0/24 -d 10.89.1.0/24 -j REJECT # app-network (postgres, other services)
+    - -s 10.89.2.0/24 -d 172.16.0.0/12 -j REJECT # RFC1918 172.16-31.x
+    - -s 10.89.2.0/24 -d 100.64.0.0/10 -j REJECT # Tailscale CGNAT (prevent reaching tailnet peers)
 
 # --- Kernel parameters ---
 sysctl:
@@ -185,8 +185,8 @@ sysctl:
 
 # --- Reconciler settings ---
 reconciler:
-  interval_minutes: 5
+  interval_minutes: 30
   log_identifier: homelab-reconciler
   auto_reboot: false
-  max_drift_minutes: 30
+  max_drift_minutes: 60
   sops_version: "3.11.0"
