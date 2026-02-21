@@ -15,6 +15,7 @@ Image=docker.io/library/postgres:16-alpine
 AutoUpdate=registry
 
 Network=app-network.network
+IP=10.89.1.5
 NetworkAlias=postgres
 
 Volume=postgres-data.volume:/var/lib/postgresql/data:Z

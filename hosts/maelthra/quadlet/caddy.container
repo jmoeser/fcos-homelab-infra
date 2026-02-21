@@ -18,6 +18,7 @@ Image=docker.io/library/caddy:2-alpine
 AutoUpdate=registry
 
 Network=app-network.network
+IP=10.89.1.6
 
 # Expose on host for LAN access
 PublishPort=80:80
