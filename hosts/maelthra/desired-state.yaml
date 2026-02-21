@@ -148,6 +148,15 @@ firewall:
     - port: 80/tcp
     - port: 22/tcp
     # Note: OpenClaw is now only reachable via Tailscale — no LAN port needed
+  forward_rules:
+    # Prevent openclaw-network (10.89.2.0/24) from reaching local/internal networks.
+    # Allows outbound internet access only. Applied to the FORWARD chain via firewall-cmd --direct.
+    # NOTE: Requires rootless Podman to use netavark bridge (not slirp4netns) to take effect.
+    # Verify with: iptables -L FORWARD -n -v | grep 10.89.2
+    - -s 10.89.2.0/24 -d 192.168.0.0/16 -j REJECT    # home LAN
+    - -s 10.89.2.0/24 -d 10.89.1.0/24 -j REJECT       # app-network (postgres, other services)
+    - -s 10.89.2.0/24 -d 172.16.0.0/12 -j REJECT      # RFC1918 172.16-31.x
+    - -s 10.89.2.0/24 -d 100.64.0.0/10 -j REJECT      # Tailscale CGNAT (prevent reaching tailnet peers)
 
 # --- Kernel parameters ---
 sysctl:
