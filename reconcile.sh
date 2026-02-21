@@ -647,12 +647,24 @@ reconcile_firewall() {
         CHANGES_MADE=1
     done < <(yaml_get '.firewall.open_ports')
 
-    # Apply direct FORWARD chain rules (e.g., block container subnets from reaching LAN)
+    # Apply FORWARD ACCEPT rules at priority -1 (processed before priority-0 REJECTs)
+    while IFS= read -r rule; do
+        [[ -z "${rule}" ]] && continue
+        read -ra rule_args <<< "${rule}"
+        if ! firewall-cmd --direct --query-rule ipv4 filter FORWARD -1 "${rule_args[@]}" &>/dev/null; then
+            log "Adding FORWARD allow rule: ${rule}"
+            firewall-cmd --direct --permanent --add-rule ipv4 filter FORWARD -1 "${rule_args[@]}"
+            fw_changed=1
+            CHANGES_MADE=1
+        fi
+    done < <(yaml_get '.firewall.forward_allow')
+
+    # Apply FORWARD REJECT rules at priority 0 (after priority -1 ACCEPTs)
     while IFS= read -r rule; do
         [[ -z "${rule}" ]] && continue
         read -ra rule_args <<< "${rule}"
         if ! firewall-cmd --direct --query-rule ipv4 filter FORWARD 0 "${rule_args[@]}" &>/dev/null; then
-            log "Adding FORWARD rule: ${rule}"
+            log "Adding FORWARD block rule: ${rule}"
             firewall-cmd --direct --permanent --add-rule ipv4 filter FORWARD 0 "${rule_args[@]}"
             fw_changed=1
             CHANGES_MADE=1
