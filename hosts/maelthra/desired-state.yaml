@@ -171,6 +171,12 @@ firewall:
     - port: 80/tcp
     - port: 22/tcp
     # Note: OpenClaw is now only reachable via Tailscale — no LAN port needed
+  input_allow:
+    # Allow Podman bridge networks to reach aardvark-dns on the host.
+    # Tailscale's kernel networking (CAP_NET_ADMIN + tun) inside container namespaces
+    # prevents containers from reaching 10.89.1.1:53 via new connections; the host's
+    # HOMELAB-INPUT default DROP blocks these UDP packets before aardvark-dns sees them.
+    - -s 10.89.1.0/24 -p udp --dport 53 -j ACCEPT
   forward_allow:
     # ACCEPT rules evaluated before the REJECT rules below (order matters).
     - -s 10.89.2.0/24 -d 10.89.1.0/24 -p tcp --dport 8000 -j ACCEPT # glow-worm MCP server

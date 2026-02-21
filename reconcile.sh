@@ -653,7 +653,14 @@ reconcile_firewall() {
         forward_rules+=("${rule}")
     done < <(yaml_get '.firewall.forward_rules')
 
-    if [[ ${#open_ports[@]} -eq 0 && ${#forward_allow[@]} -eq 0 && ${#forward_rules[@]} -eq 0 ]]; then
+    # Collect INPUT ACCEPT rules (iptables syntax, inserted before default DROP)
+    local -a input_allow=()
+    while IFS= read -r rule; do
+        [[ -z "${rule}" ]] && continue
+        input_allow+=("${rule}")
+    done < <(yaml_get '.firewall.input_allow')
+
+    if [[ ${#open_ports[@]} -eq 0 && ${#forward_allow[@]} -eq 0 && ${#forward_rules[@]} -eq 0 && ${#input_allow[@]} -eq 0 ]]; then
         log "No firewall rules defined. Skipping."
         return 0
     fi
@@ -661,6 +668,7 @@ reconcile_firewall() {
     # Idempotency check via checksum of desired rule set
     local desired_rules=""
     for p in "${open_ports[@]}";     do desired_rules+="PORT:${p}\n"; done
+    for r in "${input_allow[@]}";    do desired_rules+="IA:${r}\n";   done
     for r in "${forward_allow[@]}";  do desired_rules+="FA:${r}\n";   done
     for r in "${forward_rules[@]}";  do desired_rules+="FR:${r}\n";   done
 
@@ -692,6 +700,12 @@ reconcile_firewall() {
         local port="${port_proto%%/*}"
         local proto="${port_proto##*/}"
         iptables -A HOMELAB-INPUT -p "${proto}" --dport "${port}" -j ACCEPT
+    done
+
+    # Custom INPUT ACCEPT rules (evaluated before default DROP)
+    for rule in "${input_allow[@]}"; do
+        read -ra rule_args <<< "${rule}"
+        iptables -A HOMELAB-INPUT "${rule_args[@]}"
     done
 
     # Default deny at end of chain
