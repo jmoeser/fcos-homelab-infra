@@ -15,10 +15,10 @@ AutoUpdate=registry
 
 Network=app-network.network
 IP=10.89.1.2
-EnvironmentFile=/etc/coreos-gitops/tailscale-glow-worm.env
+EnvironmentFile=/etc/homelab-gitops/tailscale-glow-worm.env
 
 Volume=ts-glow-worm-state.volume:/var/lib/tailscale:Z
-Volume=/etc/coreos-gitops/ts-serve/glow-worm-serve.json:/config/serve.json:ro,Z
+Volume=/etc/homelab-gitops/ts-serve/glow-worm-serve.json:/config/serve.json:ro,Z
 
 AddDevice=/dev/net/tun:/dev/net/tun
 AddCapability=CAP_NET_ADMIN

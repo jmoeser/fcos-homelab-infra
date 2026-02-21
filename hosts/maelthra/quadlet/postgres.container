@@ -18,8 +18,8 @@ Network=app-network.network
 NetworkAlias=postgres
 
 Volume=postgres-data.volume:/var/lib/postgresql/data:Z
-Volume=/etc/coreos-gitops/pg-init:/docker-entrypoint-initdb.d:Z,ro
-EnvironmentFile=/etc/coreos-gitops/postgres.env
+Volume=/etc/homelab-gitops/pg-init:/docker-entrypoint-initdb.d:Z,ro
+EnvironmentFile=/etc/homelab-gitops/postgres.env
 
 # Resource limits
 PodmanArgs=--memory=512m --cpus=1.0

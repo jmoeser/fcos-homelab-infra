@@ -5,7 +5,7 @@ Wants=postgres.service
 
 [Service]
 Type=oneshot
-ExecStart=/var/lib/coreos-gitops/scripts/pg-backup.sh backup
+ExecStart=/var/lib/homelab-gitops/scripts/pg-backup.sh backup
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=pg-backup

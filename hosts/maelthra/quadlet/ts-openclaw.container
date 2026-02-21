@@ -16,10 +16,10 @@ Image=ghcr.io/tailscale/tailscale:latest
 AutoUpdate=registry
 
 Network=host
-EnvironmentFile=/etc/coreos-gitops/tailscale-openclaw.env
+EnvironmentFile=/etc/homelab-gitops/tailscale-openclaw.env
 
 Volume=ts-openclaw-state.volume:/var/lib/tailscale:Z
-Volume=/etc/coreos-gitops/ts-serve/openclaw-serve.json:/config/serve.json:ro,Z
+Volume=/etc/homelab-gitops/ts-serve/openclaw-serve.json:/config/serve.json:ro,Z
 
 # Tailscale needs tun device and NET_ADMIN
 AddDevice=/dev/net/tun:/dev/net/tun

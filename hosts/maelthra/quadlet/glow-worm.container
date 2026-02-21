@@ -16,7 +16,7 @@ AutoUpdate=registry
 # Share network namespace with the Tailscale sidecar
 Network=ts-glow-worm.container
 
-EnvironmentFile=/etc/coreos-gitops/glow-worm.env
+EnvironmentFile=/etc/homelab-gitops/glow-worm.env
 
 PodmanArgs=--memory=256m --cpus=0.5
 

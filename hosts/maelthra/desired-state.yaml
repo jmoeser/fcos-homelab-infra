@@ -52,6 +52,10 @@ secrets:
     target: /etc/homelab-gitops/rclone.conf
     mode: "0600"
 
+  - source: tailscale-ollama.env
+    target: /etc/homelab-gitops/tailscale-ollama.env
+    mode: "0600"
+
 # --- Podman Quadlet containers ---
 quadlet:
   source_dir: quadlet
@@ -64,6 +68,8 @@ quadlet:
     - ts-firefly-state.volume
     - ts-glow-worm-state.volume
     - ts-openclaw-state.volume
+    - ts-ollama-state.volume
+    - ollama-models.volume
     - caddy-data.volume
     - caddy-config.volume
     # Database
@@ -72,9 +78,12 @@ quadlet:
     - ts-firefly.container
     - ts-glow-worm.container
     - ts-openclaw.container
+    - ts-ollama.container
     # Python applications (share TS sidecar network namespace)
     - firefly.container
     - glow-worm.container
+    # Ollama LLM server (shares ts-ollama network namespace)
+    - ollama.container
     # LAN reverse proxy
     - caddy.container
 
@@ -125,6 +134,10 @@ files:
     target: /etc/homelab-gitops/ts-serve/openclaw-serve.json
     mode: "0644"
 
+  - source: etc/homelab-gitops/ts-serve/ollama-serve.json
+    target: /etc/homelab-gitops/ts-serve/ollama-serve.json
+    mode: "0644"
+
   - source: etc/homelab-gitops/openclaw/openclaw.json
     target: /home/openclaw/.config/homelab-gitops/openclaw/openclaw.json
     owner: openclaw
@@ -150,7 +163,8 @@ firewall:
     # Note: OpenClaw is now only reachable via Tailscale — no LAN port needed
   forward_allow:
     # ACCEPT rules applied at priority -1, before the priority-0 REJECTs below.
-    - -s 10.89.2.0/24 -d 10.89.1.0/24 -p tcp --dport 8000 -j ACCEPT  # glow-worm MCP server
+    - -s 10.89.2.0/24 -d 10.89.1.0/24 -p tcp --dport 8000 -j ACCEPT   # glow-worm MCP server
+    - -s 10.89.2.0/24 -d 10.89.1.3 -p tcp --dport 11434 -j ACCEPT      # ollama API
   forward_rules:
     # Prevent openclaw-network (10.89.2.0/24) from reaching local/internal networks.
     # Allows outbound internet access only. Applied to the FORWARD chain via firewall-cmd --direct.
