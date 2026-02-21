@@ -28,11 +28,12 @@ DropCapability=all
 
 PodmanArgs=--memory=10g
 
-HealthCmd=curl -sf http://localhost:11434/ || exit 1
-HealthInterval=30s
-HealthTimeout=5s
-HealthRetries=3
-HealthStartPeriod=60s
+# No curl or wget in container
+# HealthCmd=curl -sf http://localhost:11434/ || exit 1
+# HealthInterval=30s
+# HealthTimeout=5s
+# HealthRetries=3
+# HealthStartPeriod=60s
 
 [Service]
 Restart=always
