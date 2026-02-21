@@ -15,7 +15,7 @@ StartLimitBurst=5
 
 [Container]
 ContainerName=ollama
-Image=ollama/ollama:latest
+Image=docker.io/ollama/ollama:latest
 AutoUpdate=registry
 
 # Share network namespace with the Tailscale sidecar
