@@ -604,77 +604,124 @@ reconcile_files() {
 }
 
 # ---------------------------------------------------------------------------
-# Firewall
+# Firewall (iptables via custom chains)
+#
+# Uses two custom chains to avoid touching Podman's chains:
+#   HOMELAB-INPUT   — jumped to from INPUT at position 1; handles port allowlist + default drop
+#   HOMELAB-FORWARD — jumped to from FORWARD at position 1; handles cross-network ACCEPT/REJECT rules
+#
+# Idempotency: desired rules are checksummed; chains are only flushed+repopulated when the
+# checksum changes. Rules persist across reboots via netfilter-persistent (iptables-persistent pkg).
 # ---------------------------------------------------------------------------
 reconcile_firewall() {
-    log "Reconciling firewall rules..."
+    log "Reconciling firewall rules (iptables)..."
 
-    if ! command -v firewall-cmd &>/dev/null; then
-        log "firewalld not available. Skipping."
+    if ! command -v iptables &>/dev/null; then
+        log "iptables not available. Skipping."
         return 0
     fi
 
-    local default_zone
-    default_zone=$(yaml_get '.firewall.default_zone' 2>/dev/null || echo "")
-    if [[ -z "${default_zone}" ]]; then
-        return 0
-    fi
-
-    local current_zone
-    current_zone=$(firewall-cmd --get-default-zone)
-    if [[ "${current_zone}" != "${default_zone}" ]]; then
-        log "Setting default zone to ${default_zone}"
-        firewall-cmd --set-default-zone="${default_zone}"
-        CHANGES_MADE=1
-    fi
-
-    local current_ports
-    current_ports=$(firewall-cmd --zone="${default_zone}" --list-ports 2>/dev/null || echo "")
-
-    local fw_changed=0
+    # Collect open ports (format: "443/tcp")
+    local -a open_ports=()
     while IFS= read -r entry; do
         [[ -z "${entry}" ]] && continue
         local port
         port=$(echo "${entry}" | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['port'])")
-
-        if echo "${current_ports}" | grep -qw "${port}"; then
-            continue
-        fi
-
-        log "Opening port: ${port}"
-        firewall-cmd --zone="${default_zone}" --add-port="${port}" --permanent
-        fw_changed=1
-        CHANGES_MADE=1
+        open_ports+=("${port}")
     done < <(yaml_get '.firewall.open_ports')
 
-    # Apply FORWARD ACCEPT rules at priority -1 (processed before priority-0 REJECTs)
+    # Collect FORWARD ACCEPT rules (iptables syntax, evaluated before deny rules)
+    local -a forward_allow=()
     while IFS= read -r rule; do
         [[ -z "${rule}" ]] && continue
-        read -ra rule_args <<< "${rule}"
-        if ! firewall-cmd --direct --query-rule ipv4 filter FORWARD -1 "${rule_args[@]}" &>/dev/null; then
-            log "Adding FORWARD allow rule: ${rule}"
-            firewall-cmd --direct --permanent --add-rule ipv4 filter FORWARD -1 "${rule_args[@]}"
-            fw_changed=1
-            CHANGES_MADE=1
-        fi
+        forward_allow+=("${rule}")
     done < <(yaml_get '.firewall.forward_allow')
 
-    # Apply FORWARD REJECT rules at priority 0 (after priority -1 ACCEPTs)
+    # Collect FORWARD REJECT/DROP rules (iptables syntax)
+    local -a forward_rules=()
     while IFS= read -r rule; do
         [[ -z "${rule}" ]] && continue
-        read -ra rule_args <<< "${rule}"
-        if ! firewall-cmd --direct --query-rule ipv4 filter FORWARD 0 "${rule_args[@]}" &>/dev/null; then
-            log "Adding FORWARD block rule: ${rule}"
-            firewall-cmd --direct --permanent --add-rule ipv4 filter FORWARD 0 "${rule_args[@]}"
-            fw_changed=1
-            CHANGES_MADE=1
-        fi
+        forward_rules+=("${rule}")
     done < <(yaml_get '.firewall.forward_rules')
 
-    if [[ ${fw_changed} -eq 1 ]]; then
-        firewall-cmd --reload
+    if [[ ${#open_ports[@]} -eq 0 && ${#forward_allow[@]} -eq 0 && ${#forward_rules[@]} -eq 0 ]]; then
+        log "No firewall rules defined. Skipping."
+        return 0
     fi
 
+    # Idempotency check via checksum of desired rule set
+    local desired_rules=""
+    for p in "${open_ports[@]}";     do desired_rules+="PORT:${p}\n"; done
+    for r in "${forward_allow[@]}";  do desired_rules+="FA:${r}\n";   done
+    for r in "${forward_rules[@]}";  do desired_rules+="FR:${r}\n";   done
+
+    local desired_sha
+    desired_sha=$(printf '%b' "${desired_rules}" | sha256sum | cut -d' ' -f1)
+
+    local state_file="/etc/homelab-gitops/fw-state.sha256"
+    if [[ -f "${state_file}" ]] && [[ "$(cat "${state_file}")" == "${desired_sha}" ]]; then
+        log "Firewall rules up to date."
+        return 0
+    fi
+
+    log "Applying iptables rules..."
+
+    # --- HOMELAB-INPUT ---
+    if iptables -L HOMELAB-INPUT -n &>/dev/null; then
+        iptables -F HOMELAB-INPUT
+    else
+        iptables -N HOMELAB-INPUT
+    fi
+
+    # Base rules: allow established/related, drop invalid, allow loopback
+    iptables -A HOMELAB-INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    iptables -A HOMELAB-INPUT -m conntrack --ctstate INVALID -j DROP
+    iptables -A HOMELAB-INPUT -i lo -j ACCEPT
+
+    # Open configured ports
+    for port_proto in "${open_ports[@]}"; do
+        local port="${port_proto%%/*}"
+        local proto="${port_proto##*/}"
+        iptables -A HOMELAB-INPUT -p "${proto}" --dport "${port}" -j ACCEPT
+    done
+
+    # Default deny at end of chain
+    iptables -A HOMELAB-INPUT -j DROP
+
+    # Ensure INPUT → HOMELAB-INPUT jump exists at position 1
+    iptables -C INPUT -j HOMELAB-INPUT 2>/dev/null || iptables -I INPUT 1 -j HOMELAB-INPUT
+
+    # --- HOMELAB-FORWARD ---
+    if iptables -L HOMELAB-FORWARD -n &>/dev/null; then
+        iptables -F HOMELAB-FORWARD
+    else
+        iptables -N HOMELAB-FORWARD
+    fi
+
+    # ACCEPT rules first (order matters — first match wins)
+    for rule in "${forward_allow[@]}"; do
+        read -ra rule_args <<< "${rule}"
+        iptables -A HOMELAB-FORWARD "${rule_args[@]}"
+    done
+
+    # REJECT/DROP rules after
+    for rule in "${forward_rules[@]}"; do
+        read -ra rule_args <<< "${rule}"
+        iptables -A HOMELAB-FORWARD "${rule_args[@]}"
+    done
+
+    # Ensure FORWARD → HOMELAB-FORWARD jump exists at position 1
+    iptables -C FORWARD -j HOMELAB-FORWARD 2>/dev/null || iptables -I FORWARD 1 -j HOMELAB-FORWARD
+
+    # Save desired-state checksum
+    echo "${desired_sha}" > "${state_file}"
+
+    # Persist rules for next boot
+    if command -v netfilter-persistent &>/dev/null; then
+        netfilter-persistent save >/dev/null 2>&1 || warn "netfilter-persistent save failed"
+    fi
+
+    CHANGES_MADE=1
     log "Firewall reconciled."
 }
 
