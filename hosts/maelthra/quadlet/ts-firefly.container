@@ -18,6 +18,7 @@ Image=ghcr.io/tailscale/tailscale:latest
 AutoUpdate=registry
 
 Network=app-network.network
+IP=10.89.1.4
 EnvironmentFile=/etc/homelab-gitops/tailscale-firefly.env
 
 Volume=ts-firefly-state.volume:/var/lib/tailscale:Z

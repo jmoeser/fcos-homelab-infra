@@ -1,4 +1,4 @@
-# ts-firefly.container — Tailscale sidecar for glow-worm
+# ts-glow-worm.container — Tailscale sidecar for glow-worm
 # Same pattern as ts-firefly. glow-worm shares this container's network namespace.
 
 [Unit]
