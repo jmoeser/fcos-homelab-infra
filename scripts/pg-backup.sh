@@ -24,6 +24,8 @@ AGE_RECIPIENT_FILE="${PG_BACKUP_AGE_RECIPIENTS:-/etc/homelab-gitops/age-recipien
 AGE_KEY_FILE="${PG_BACKUP_AGE_KEY:-/etc/homelab-gitops/age-key.txt}"
 RETENTION_DAYS="${PG_BACKUP_RETENTION_DAYS:-30}"
 PG_CONTAINER="${PG_BACKUP_CONTAINER:-postgres}"
+OPENCLAW_USER="${OPENCLAW_BACKUP_USER:-openclaw}"
+OPENCLAW_WORKSPACE="${OPENCLAW_BACKUP_WORKSPACE:-/home/openclaw/workspace}"
 LOG_ID="pg-backup"
 
 # Read Postgres credentials from the deployed env file
@@ -143,6 +145,94 @@ do_backup() {
 }
 
 # ---------------------------------------------------------------------------
+# OpenClaw backup (config volume + workspace)
+# ---------------------------------------------------------------------------
+do_openclaw_backup() {
+    local timestamp
+    timestamp=$(date -u +"%Y%m%d-%H%M%S")
+
+    # --- Config volume (contains memory, auth tokens, conversation history) ---
+    local config_basename="openclaw-backup-config-${timestamp}"
+    log "Starting backup: ${config_basename}"
+
+    local config_dump="${BACKUP_DIR}/.tmp_${config_basename}.tar.gz"
+    log "  Exporting openclaw-config volume as user '${OPENCLAW_USER}'..."
+
+    if ! runuser -u "${OPENCLAW_USER}" -- \
+        podman volume export openclaw-config \
+        | gzip -9 > "${config_dump}"; then
+        err "Failed to export openclaw-config volume"
+        return 1
+    fi
+
+    local config_size
+    config_size=$(du -h "${config_dump}" | cut -f1)
+    log "  Export complete: ${config_size} compressed"
+
+    local config_enc="${BACKUP_DIR}/${config_basename}.tar.gz.age"
+    log "  Encrypting with age..."
+
+    if ! age --encrypt --recipients-file "${AGE_RECIPIENT_FILE}" \
+        --output "${config_enc}" "${config_dump}"; then
+        err "age encryption failed for openclaw-config"
+        rm -f "${config_dump}"
+        return 1
+    fi
+    rm -f "${config_dump}"
+
+    log "  Uploading to ${RCLONE_REMOTE}:${RCLONE_BUCKET}..."
+    if ! rclone --config "${RCLONE_CONFIG}" \
+        copy "${config_enc}" "${RCLONE_REMOTE}:${RCLONE_BUCKET}/" \
+        --progress --transfers 1; then
+        warn "Upload failed for openclaw-config. Local backup retained: ${config_enc}"
+        return 1
+    fi
+    rm -f "${config_enc}"
+    log "Backup '${config_basename}' completed successfully."
+
+    # --- Workspace directory ---
+    if [[ -d "${OPENCLAW_WORKSPACE}" ]] && [[ -n "$(ls -A "${OPENCLAW_WORKSPACE}" 2>/dev/null)" ]]; then
+        local ws_basename="openclaw-backup-workspace-${timestamp}"
+        log "Starting backup: ${ws_basename}"
+
+        local ws_dump="${BACKUP_DIR}/.tmp_${ws_basename}.tar.gz"
+        log "  Archiving workspace ${OPENCLAW_WORKSPACE}..."
+
+        if ! tar -czf "${ws_dump}" \
+            -C "$(dirname "${OPENCLAW_WORKSPACE}")" \
+            "$(basename "${OPENCLAW_WORKSPACE}")"; then
+            err "Failed to archive openclaw workspace"
+            rm -f "${ws_dump}"
+            return 1
+        fi
+
+        local ws_size
+        ws_size=$(du -h "${ws_dump}" | cut -f1)
+        log "  Archive complete: ${ws_size} compressed"
+
+        local ws_enc="${BACKUP_DIR}/${ws_basename}.tar.gz.age"
+        if ! age --encrypt --recipients-file "${AGE_RECIPIENT_FILE}" \
+            --output "${ws_enc}" "${ws_dump}"; then
+            err "age encryption failed for openclaw workspace"
+            rm -f "${ws_dump}"
+            return 1
+        fi
+        rm -f "${ws_dump}"
+
+        if ! rclone --config "${RCLONE_CONFIG}" \
+            copy "${ws_enc}" "${RCLONE_REMOTE}:${RCLONE_BUCKET}/" \
+            --progress --transfers 1; then
+            warn "Upload failed for openclaw workspace. Local backup retained: ${ws_enc}"
+            return 1
+        fi
+        rm -f "${ws_enc}"
+        log "Backup '${ws_basename}' completed successfully."
+    else
+        log "Workspace ${OPENCLAW_WORKSPACE} is empty or missing — skipping."
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Prune old backups
 # ---------------------------------------------------------------------------
 prune_remote() {
@@ -157,9 +247,9 @@ prune_remote() {
         lsf "${RCLONE_REMOTE}:${RCLONE_BUCKET}/" \
         --files-only 2>/dev/null | while IFS= read -r file; do
 
-        # Extract date from filename: pg-backup-<dbname>-YYYYMMDD-HHMMSS.sql.gz.age
+        # Extract date from any backup filename: *-YYYYMMDD-HHMMSS.*
         local file_date
-        file_date=$(echo "${file}" | grep -oP 'pg-backup-\w+-\K\d{8}' || echo "")
+        file_date=$(echo "${file}" | grep -oP '\d{8}(?=-\d{6}\.)' || echo "")
 
         if [[ -z "${file_date}" ]]; then
             continue
@@ -175,6 +265,7 @@ prune_remote() {
 
     # Also clean up any leftover local backups
     find "${BACKUP_DIR}" -name "pg-backup-*.sql.gz.age" -mtime "+${RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "${BACKUP_DIR}" -name "openclaw-backup-*.tar.gz.age" -mtime "+${RETENTION_DAYS}" -delete 2>/dev/null || true
 
     log "Pruning complete."
 }
@@ -221,6 +312,7 @@ main() {
         backup)
             preflight
             do_backup
+            do_openclaw_backup
             prune_remote
             ;;
         prune)
