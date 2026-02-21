@@ -1,0 +1,10 @@
+[Unit]
+Description=Prune unused Podman images after auto-update
+After=podman-auto-update.service
+
+[Service]
+Type=oneshot
+ExecStart=podman image prune -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=podman-image-prune

@@ -63,6 +63,8 @@ HealthStartPeriod=30s
 # The - prefix makes this non-fatal: if the pull fails (offline, registry down)
 # Podman falls back to the cached image.
 ExecStartPre=-/usr/bin/podman pull ghcr.io/openclaw/openclaw:latest
+# Prune dangling images left behind by pulls above.
+ExecStartPost=-/usr/bin/podman image prune -f
 Restart=always
 RestartSec=15s
 TimeoutStartSec=600

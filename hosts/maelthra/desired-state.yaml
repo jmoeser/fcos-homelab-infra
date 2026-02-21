@@ -108,6 +108,8 @@ systemd:
       enabled: false
     - name: pg-backup.timer
       enabled: true
+    - name: podman-image-prune.service
+      enabled: false
 
 # --- Config files (non-secret, committed in plaintext) ---
 files:
@@ -144,6 +146,11 @@ files:
     target: /home/openclaw/.config/homelab-gitops/openclaw/openclaw.json
     owner: openclaw
     mode: "0600"
+
+  - source: etc/systemd/system/podman-auto-update.service.d/prune.conf
+    target: /etc/systemd/system/podman-auto-update.service.d/prune.conf
+    mode: "0644"
+    reload_cmd: systemctl daemon-reload
 
   - source: etc/sysctl.d/99-custom.conf
     target: /etc/sysctl.d/99-custom.conf
