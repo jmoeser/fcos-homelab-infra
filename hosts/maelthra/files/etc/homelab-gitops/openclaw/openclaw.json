@@ -4,11 +4,13 @@
   },
   "agents": {
     "defaults": {
-      "workspace": "/home/node/openclaw/workspace"
+      "workspace": "/home/node/openclaw/workspace",
+      "heartbeat": {
+        "every": "1h",
+        "target": "last",
+        "activeHours": { "start": "20:00", "end": "08:00" }
+      }
     }
-  },
-  "heartbeat": {
-    "every": "30m"
   },
   "logging": {
     "level": "info",
