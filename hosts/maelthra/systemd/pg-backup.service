@@ -12,4 +12,4 @@ SyslogIdentifier=pg-backup
 
 # Backup-specific env overrides (optional)
 # Environment=PG_BACKUP_RETENTION_DAYS=30
-# Environment=PG_BACKUP_RCLONE_BUCKET=coreos-pg-backups
+Environment=PG_BACKUP_RCLONE_BUCKET=maelthra
