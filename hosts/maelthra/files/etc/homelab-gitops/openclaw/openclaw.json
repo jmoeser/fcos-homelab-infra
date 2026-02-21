@@ -1,6 +1,19 @@
 {
-  // Trust Tailscale serve proxy running on the host via host networking
   "gateway": {
-    "trustedProxies": ["127.0.0.1", "10.89.2.0/24"]
+    "trustedProxies": ["10.89.2.0/24"]
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "/home/node/openclaw/workspace"
+    }
+  },
+  "heartbeat": {
+    "every": "30m"
+  },
+  "logging": {
+    "level": "info",
+    "consoleLevel": "info",
+    "consoleStyle": "compact",
+    "redactSensitive": "tools"
   }
 }
