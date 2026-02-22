@@ -49,6 +49,7 @@ sops_type_for_file() {
     case "$1" in
         *.env) echo "dotenv" ;;
         *.conf) echo "ini" ;;
+        *.json) echo "json" ;;
         *) echo "unknown" ;;
     esac
 }
@@ -86,7 +87,7 @@ if [[ $# -gt 1 ]]; then
 else
     # Encrypt all secret files
     echo "Encrypting all secrets in ${SECRETS_DIR}..."
-    for f in "${SECRETS_DIR}"/*.env "${SECRETS_DIR}"/*.conf; do
+    for f in "${SECRETS_DIR}"/*.env "${SECRETS_DIR}"/*.conf "${SECRETS_DIR}"/*.json; do
         [[ -f "${f}" ]] || continue
         encrypt_file "${f}"
     done

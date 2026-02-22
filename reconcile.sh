@@ -201,6 +201,7 @@ decrypt_secrets() {
         case "${source}" in
             *.env)  sops_type="dotenv" ;;
             *.conf) sops_type="ini" ;;
+            *.json) sops_type="json" ;;
             *)      warn "Unknown secret file type: ${source} — skipping."
                     continue ;;
         esac

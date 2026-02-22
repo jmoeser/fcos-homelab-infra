@@ -58,6 +58,11 @@ secrets:
     target: /etc/homelab-gitops/tailscale-ollama.env
     mode: "0600"
 
+  - source: openclaw.json
+    target: /home/openclaw/.config/homelab-gitops/openclaw/openclaw.json
+    owner: openclaw
+    mode: "0600"
+
 # --- Podman Quadlet containers ---
 quadlet:
   source_dir: quadlet
@@ -141,11 +146,6 @@ files:
   - source: etc/homelab-gitops/ts-serve/ollama-serve.json
     target: /etc/homelab-gitops/ts-serve/ollama-serve.json
     mode: "0644"
-
-  - source: etc/homelab-gitops/openclaw/openclaw.json
-    target: /home/openclaw/.config/homelab-gitops/openclaw/openclaw.json
-    owner: openclaw
-    mode: "0600"
 
   - source: etc/systemd/system/podman-auto-update.service.d/prune.conf
     target: /etc/systemd/system/podman-auto-update.service.d/prune.conf
