@@ -30,7 +30,7 @@ PublishPort=127.0.0.1:18789:18789
 
 # Persistent storage
 Volume=openclaw-config.volume:/home/node/.openclaw:Z
-Volume=%h/workspace:/home/node/openclaw/workspace:Z
+Volume=%h/workspace:/home/node/openclaw/workspace:Z,U
 Volume=%h/.config/homelab-gitops/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json:ro
 
 # Environment
