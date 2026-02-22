@@ -158,7 +158,11 @@ do_openclaw_backup() {
     local config_dump="${BACKUP_DIR}/.tmp_${config_basename}.tar.gz"
     log "  Exporting openclaw-config volume as user '${OPENCLAW_USER}'..."
 
+    local openclaw_uid
+    openclaw_uid=$(id -u "${OPENCLAW_USER}")
+
     if ! runuser -u "${OPENCLAW_USER}" -- \
+        env XDG_RUNTIME_DIR="/run/user/${openclaw_uid}" \
         podman volume export openclaw-config \
         | gzip -9 > "${config_dump}"; then
         err "Failed to export openclaw-config volume"
