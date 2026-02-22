@@ -162,6 +162,11 @@ files:
     mode: "0600"
     reload_cmd: systemctl reload sshd
 
+  - source: boot/firmware/cmdline.txt
+    target: /boot/firmware/cmdline.txt
+    mode: "0755"
+    # No reload_cmd — changes require a reboot, which is not done automatically
+
 # --- Firewall rules ---
 # Managed via iptables custom chains (HOMELAB-INPUT, HOMELAB-FORWARD).
 # Rules persist across reboots via iptables-persistent / netfilter-persistent.
