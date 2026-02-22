@@ -61,7 +61,7 @@ secrets:
   - source: openclaw.json
     target: /home/openclaw/.config/homelab-gitops/openclaw/openclaw.json
     owner: openclaw
-    mode: "0600"
+    mode: "0644"
 
 # --- Podman Quadlet containers ---
 quadlet:
